@@ -1,4 +1,4 @@
-# MenuTemp PRD — macOS 菜单栏实时系统指标
+# System-Bar PRD — macOS 菜单栏实时系统指标
 
 ## 1. 背景
 

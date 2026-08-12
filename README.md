@@ -1,4 +1,4 @@
-# MenuTemp
+# System-Bar
 
 macOS 菜单栏实时系统指标显示（Apple Silicon），最小开销、免 root、可开关配置。
 
@@ -28,20 +28,20 @@ macOS 菜单栏实时系统指标显示（Apple Silicon），最小开销、免 
 ./scripts/install.sh
 ```
 
-安装到 `/Applications/MenuTemp.app` 并注册登录自启（LaunchAgent）。
+安装到 `/Applications/System-Bar.app` 并注册登录自启（LaunchAgent）。
 
 手动方式：
 
 ```bash
-./scripts/build.sh          # 产物: build/MenuTemp.app
-open build/MenuTemp.app
+./scripts/build.sh          # 产物: build/System-Bar.app
+open build/System-Bar.app
 ```
 
 ## 卸载
 
 ```bash
 launchctl unload ~/Library/LaunchAgents/com.menutemp.app.plist
-rm -rf /Applications/MenuTemp.app
+rm -rf /Applications/System-Bar.app
 ```
 
 ## 测试
@@ -54,8 +54,8 @@ rm -rf /Applications/MenuTemp.app
 ## 架构
 
 ```
-MenuTemp.app
-├── Contents/MacOS/MenuTemp   SwiftUI MenuBarExtra 应用（UI + 进程管理 + 配置）
+System-Bar.app
+├── Contents/MacOS/System-Bar   SwiftUI MenuBarExtra 应用（UI + 进程管理 + 配置）
 └── Contents/MacOS/smctemp    C helper（指标读取，IOHID + mach + IOReport + sysctl）
 ```
 
@@ -63,7 +63,7 @@ MenuTemp.app
 - helper 异常退出自动重启；指标读取均为低频采样，空闲时 helper 几乎零 CPU
 
 ```
-app/  MenuTempApp.swift   菜单栏 UI + 开关配置（UserDefaults）
+app/  System-BarApp.swift   菜单栏 UI + 开关配置（UserDefaults）
       TempMonitor.swift   helper 进程管理 + 输出解析
       Format.swift        定宽/格式化（可单测）
 helper/smctemp.c          全部指标读取（单文件 C）

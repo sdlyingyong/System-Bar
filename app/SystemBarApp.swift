@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 @main
-struct MenuTempApp: App {
+struct SystemBarApp: App {
     @StateObject private var monitor = TempMonitor()
 
     @AppStorage("show.cpuTemp") private var showCpuTemp = true
@@ -75,7 +75,7 @@ struct MenuTempApp: App {
 
             Divider()
 
-            Button("退出 MenuTemp") {
+            Button("退出 System-Bar") {
                 monitor.stop()
                 NSApplication.shared.terminate(nil)
             }

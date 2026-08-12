@@ -1,4 +1,4 @@
-// Renders MenuTemp's app icon (thermometer on dark rounded square) at 1024px.
+// Renders System-Bar's app icon (thermometer on dark rounded square) at 1024px.
 import AppKit
 import CoreGraphics
 

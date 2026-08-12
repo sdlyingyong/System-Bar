@@ -48,7 +48,7 @@ final class TempMonitor: ObservableObject {
                 self?.consume(data)
             }
         } catch {
-            NSLog("MenuTemp: failed to start helper: \(error)")
+            NSLog("System-Bar: failed to start helper: \(error)")
         }
     }
 

@@ -3,19 +3,19 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleName</key>
-	<string>MenuTemp</string>
+	<string>System-Bar</string>
 	<key>CFBundleDisplayName</key>
-	<string>MenuTemp</string>
+	<string>System-Bar</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.menutemp.app</string>
+	<string>com.system-bar.app</string>
 	<key>CFBundleVersion</key>
 	<string>1.0</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0</string>
 	<key>CFBundleExecutable</key>
-	<string>MenuTemp</string>
+	<string>System-Bar</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>LSUIElement</key>
