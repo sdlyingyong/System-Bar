@@ -50,28 +50,9 @@ struct MenuTempApp: App {
             out += AttributedString(" " + String(format: "%5.1fW", v))
         }
         if showNet, let d = monitor.downSpeed, let u = monitor.upSpeed {
-            out += AttributedString(" ↓" + pad(speedText(d), 4) + " ↑" + pad(speedText(u), 4))
+            out += AttributedString(" ↓" + Format.pad(Format.speedText(d), 4) + " ↑" + Format.pad(Format.speedText(u), 4))
         }
         return out
-    }
-
-    /// 右对齐补空格到固定宽度
-    private func pad(_ s: String, _ n: Int) -> String {
-        s.count >= n ? s : String(repeating: " ", count: n - s.count) + s
-    }
-
-    /// B/s → 紧凑显示（B / K / M / G，最多 4 字符）
-    private func speedText(_ bps: Double) -> String {
-        if bps >= 1073741824 { return String(format: "%.1fG", bps / 1073741824) }
-        if bps >= 1048576 {
-            let m = bps / 1048576
-            return m >= 100 ? "\(Int(m.rounded()))M" : String(format: "%.1fM", m)
-        }
-        if bps >= 1024 {
-            let k = bps / 1024
-            return k >= 100 ? "\(Int(k.rounded()))K" : String(format: "%.1fK", k)
-        }
-        return "\(Int(bps))B"
     }
 
     /// 电池温度提醒符号：≤40 无 / >40 🔥

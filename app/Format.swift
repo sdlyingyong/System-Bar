@@ -1,0 +1,23 @@
+import Foundation
+
+/// 菜单栏文本格式化工具：固定宽度 + 等宽数字，防止数值位数变化导致跳动。
+enum Format {
+    /// 右对齐补空格到固定宽度
+    static func pad(_ s: String, _ n: Int) -> String {
+        s.count >= n ? s : String(repeating: " ", count: n - s.count) + s
+    }
+
+    /// B/s → 紧凑显示（B / K / M / G，最多 4 字符）
+    static func speedText(_ bps: Double) -> String {
+        if bps >= 1073741824 { return String(format: "%.1fG", bps / 1073741824) }
+        if bps >= 1048576 {
+            let m = bps / 1048576
+            return m >= 100 ? "\(Int(m.rounded()))M" : String(format: "%.1fM", m)
+        }
+        if bps >= 1024 {
+            let k = bps / 1024
+            return k >= 100 ? "\(Int(k.rounded()))K" : String(format: "%.1fK", k)
+        }
+        return "\(Int(bps))B"
+    }
+}

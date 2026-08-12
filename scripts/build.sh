@@ -13,7 +13,7 @@ clang -O2 -Wall -framework CoreFoundation -framework IOKit -lIOReport \
 
 echo "[2/4] compiling MenuTemp app..."
 swiftc -O -parse-as-library \
-    "$ROOT/app/MenuTempApp.swift" "$ROOT/app/TempMonitor.swift" \
+    "$ROOT/app/MenuTempApp.swift" "$ROOT/app/TempMonitor.swift" "$ROOT/app/Format.swift" \
     -o "$OUT/MenuTemp" -framework SwiftUI -framework AppKit
 
 echo "[3/4] assembling bundle..."
