@@ -11,6 +11,7 @@ struct MenuTempApp: App {
     @AppStorage("show.memUsage") private var showMemUsage = true
     @AppStorage("show.gpuUsage") private var showGpuUsage = false
     @AppStorage("show.power") private var showPower = true
+    @AppStorage("show.net") private var showNet = true
 
     var body: some Scene {
         MenuBarExtra {
@@ -48,7 +49,17 @@ struct MenuTempApp: App {
         if showPower, let v = monitor.power {
             out += AttributedString(String(format: " %.1fW", v))
         }
+        if showNet, let d = monitor.downSpeed, let u = monitor.upSpeed {
+            out += AttributedString(" ↓\(speedText(d)) ↑\(speedText(u))")
+        }
         return out
+    }
+
+    /// B/s → 紧凑显示（B / K / M）
+    private func speedText(_ bps: Double) -> String {
+        if bps >= 1024 * 1024 { return String(format: "%.1fM", bps / 1048576) }
+        if bps >= 1024 { return "\(Int(bps / 1024))K" }
+        return "\(Int(bps))B"
     }
 
     /// 电池温度提醒符号：≤40 无 / >40 🔥
@@ -65,6 +76,7 @@ struct MenuTempApp: App {
                 Toggle("内存占用", isOn: $showMemUsage)
                 Toggle("GPU 占用", isOn: $showGpuUsage)
                 Toggle("实时功耗", isOn: $showPower)
+                Toggle("上传下载", isOn: $showNet)
             }
             .toggleStyle(.checkbox)
 

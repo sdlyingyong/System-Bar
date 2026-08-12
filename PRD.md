@@ -21,8 +21,9 @@
 | 电池温度 | °C | `gas gauge battery` 传感器 | IOHID（已验证） |
 | CPU 占用 | % | 总体 CPU 使用率 | `host_processor_info`（待验证） |
 | 内存占用 | % | used / total 内存 | `host_statistics64`（待验证） |
-| GPU 占用 | % | GPU 利用率 | 见 §9（待验证） |
-| 实时功耗 | W | 整机实时功耗 | 见 §9（待验证） |
+| GPU 占用 | % | GPU 利用率 | AGXAccelerator（已验证） |
+| 实时功耗 | W | macmon 口径：CPU+GPU+ANE | IOReport（已验证） |
+| 上传/下载速度 | KB/s·MB/s | 活动网卡字节计数差值 | sysctl iflist2（待验证） |
 
 ## 3. 非目标（明确不做）
 
@@ -71,7 +72,7 @@ C helper (smctemp)  常驻进程
   - `≤ 40°C`：正常，无符号
   - `> 40°C`：特别提醒（高温）→ `🔥`
 - 下拉菜单：
-  - **指标开关组**：CPU 温度 / 电池温度 / CPU 占用 / 内存占用 / GPU 占用 / 实时功耗（Toggle，即时生效并持久化）
+  - **指标开关组**：CPU 温度 / 电池温度 / CPU 占用 / 内存占用 / GPU 占用 / 实时功耗 / 上传下载（Toggle，即时生效并持久化）
   - 「退出」
 - 无 Dock 图标（`LSUIElement`）
 - 注：不展示原始温度传感器列表（名称晦涩无实用价值）

@@ -26,6 +26,10 @@
 #include <time.h>
 #include <dlfcn.h>
 #include <mach/mach.h>
+#include <sys/sysctl.h>
+#include <net/if.h>
+#include <net/if_mib.h>
+#include <net/route.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <IOKit/IOKitLib.h>
 
@@ -328,6 +332,58 @@ static int setup(void) {
     return 0;
 }
 
+/* ---- network speeds via sysctl interface counters (en* deltas) ---- */
+
+static uint64_t net_prev_ib = 0, net_prev_ob = 0;
+static int net_prev_valid = 0;
+
+static int read_if_totals(uint64_t *ib, uint64_t *ob) {
+    int mib[6] = {CTL_NET, PF_ROUTE, 0, 0, NET_RT_IFLIST2, 0};
+    size_t len = 0;
+    if (sysctl(mib, 6, NULL, &len, NULL, 0) != 0) return -1;
+    char *buf = malloc(len);
+    if (!buf) return -1;
+    if (sysctl(mib, 6, buf, &len, NULL, 0) != 0) { free(buf); return -1; }
+
+    uint64_t ib_ = 0, ob_ = 0;
+    char *p = buf;
+    while (p < buf + len) {
+        struct if_msghdr *msgh = (struct if_msghdr *)p;
+        if (msgh->ifm_type == RTM_IFINFO2) {
+            struct if_msghdr2 *m2 = (struct if_msghdr2 *)msgh;
+            char name[IFNAMSIZ] = {0};
+            if_indextoname(msgh->ifm_index, name);
+            if (strncmp(name, "en", 2) == 0) {
+                ib_ += m2->ifm_data.ifi_ibytes;
+                ob_ += m2->ifm_data.ifi_obytes;
+            }
+        }
+        p += msgh->ifm_msglen;
+    }
+    free(buf);
+    *ib = ib_;
+    *ob = ob_;
+    return 0;
+}
+
+// Returns -1 on first call (warm-up); else 0 with B/s in *down/*up.
+static int net_speeds(double dt_sec, double *down, double *up) {
+    uint64_t ib = 0, ob = 0;
+    if (read_if_totals(&ib, &ob) != 0) return -1;
+    if (!net_prev_valid) {
+        net_prev_ib = ib;
+        net_prev_ob = ob;
+        net_prev_valid = 1;
+        return -1;
+    }
+    if (dt_sec <= 0) return -1;
+    *down = (double)(ib - net_prev_ib) / dt_sec;
+    *up = (double)(ob - net_prev_ob) / dt_sec;
+    net_prev_ib = ib;
+    net_prev_ob = ob;
+    return 0;
+}
+
 /* ---- sampling ---- */
 
 static void sample(void) {
@@ -350,6 +406,9 @@ static void sample(void) {
     double power = power_watts(dt_sec);
     power_prev_ts = now;
 
+    double down = -1, up = -1;
+    net_speeds(dt_sec, &down, &up);
+
 #define EMIT(key, val) do { \
         int m = snprintf(buf + off, sizeof(buf) - off, "%s%s=%.1f", off ? ";" : "", key, val); \
         if (m > 0) off += (size_t)m; \
@@ -361,6 +420,8 @@ static void sample(void) {
     EMIT("mempct", mempct);
     EMIT("gpupct", gpupct);
     EMIT("power", power);
+    EMIT("down", down);
+    EMIT("up", up);
 
     for (int i = 0; i < nsensors; i++) {
         double v = read_temp(sensors[i].service);

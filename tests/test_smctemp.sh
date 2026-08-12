@@ -47,7 +47,7 @@ check "mem in 0..100 (got $MV)" "$(is_num "$MV" && in_range "$MV" 0 100 && echo 
 check "gpu in 0..100 (got $GV)" "$(is_num "$GV" && in_range "$GV" 0 100 && echo ok || echo fail)"
 
 # sensors list non-empty
-FIELDS=$(echo "$OUT" | tr ';' '\n' | grep '=' | grep -vE '^(cpu|battery|cpupct|mempct|gpupct|power)=')
+FIELDS=$(echo "$OUT" | tr ';' '\n' | grep '=' | grep -vE '^(cpu|battery|cpupct|mempct|gpupct|power|down|up)=')
 COUNT=$(echo "$FIELDS" | grep -c '=')
 check "at least 5 sensors reported (got $COUNT)" "$([ "$COUNT" -ge 5 ] && echo ok || echo fail)"
 
@@ -70,8 +70,12 @@ check "daemon mode runs" "$([ "$RC" -eq 0 ] && echo ok || echo fail)"
 THIRD=$(echo "$LINES" | sed -n '3p')
 CP=$(echo "$THIRD" | tr ';' '\n' | grep '^cpupct=' | cut -d= -f2)
 PW=$(echo "$THIRD" | tr ';' '\n' | grep '^power=' | cut -d= -f2)
+DW=$(echo "$THIRD" | tr ';' '\n' | grep '^down=' | cut -d= -f2)
+UW=$(echo "$THIRD" | tr ';' '\n' | grep '^up=' | cut -d= -f2)
 check "cpupct valid post warm-up (got $CP)" "$(is_num "$CP" && in_range "$CP" 0 100 && echo ok || echo fail)"
 check "power valid post warm-up (got $PW)" "$(is_num "$PW" && in_range "$PW" 0 100 && echo ok || echo fail)"
+check "down speed valid post warm-up (got $DW)" "$(is_num "$DW" && in_range "$DW" 0 1000000000 && echo ok || echo fail)"
+check "up speed valid post warm-up (got $UW)" "$(is_num "$UW" && in_range "$UW" 0 1000000000 && echo ok || echo fail)"
 
 echo
 echo "RESULT: $PASS passed, $FAIL failed"
