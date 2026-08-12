@@ -33,7 +33,9 @@ struct ProcMonTests {
         let mon = ProcMonitor(excludePids: [getpid()])
         mon.refresh()
         check("refresh 产生进程列表", !mon.procs.isEmpty)
-        check("refresh 限 10 个", mon.procs.count <= 10)
+        check("refresh 限 7 个", mon.procs.count <= 7)
+        check("内存百分比在 0..100", mon.procs.allSatisfy { $0.memPct >= 0 && $0.memPct <= 100 })
+        check("内存百分比降序", zip(mon.procs, mon.procs.dropFirst()).allSatisfy { $0.memPct >= $1.memPct })
         mon.refresh()
         check("refresh 二次刷新正常", !mon.procs.isEmpty)
 
