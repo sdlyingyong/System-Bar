@@ -20,4 +20,14 @@ enum Format {
         }
         return "\(Int(bps))B"
     }
+
+    /// 字节 → 剩余空间显示（M / G / T，最多 4 字符）
+    static func freeText(_ bytes: Double) -> String {
+        if bytes >= 1099511627776 {
+            let t = bytes / 1099511627776
+            return t >= 10 ? "\(Int(t.rounded()))T" : String(format: "%.1fT", t)
+        }
+        if bytes >= 1073741824 { return "\(Int((bytes / 1073741824).rounded()))G" }
+        return "\(Int((bytes / 1048576).rounded()))M"
+    }
 }

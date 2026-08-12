@@ -26,7 +26,7 @@ RC=$?
 check "exit code 0 (got $RC)" "$([ "$RC" -eq 0 ] && echo ok || echo fail)"
 
 # required metric keys present
-for k in cpu battery cpupct mempct gpupct power down up batcyc bathealth; do
+for k in cpu battery cpupct mempct gpupct power down up batcyc bathealth diskread diskwrite diskfree; do
     check "has key $k" "$([[ "$OUT" == *";$k="* || "$OUT" == "$k="* ]] && echo ok || echo fail)"
 done
 
@@ -37,6 +37,10 @@ BC=$(field batcyc)
 BH=$(field bathealth)
 check "battery cycles in 0..3000 (got $BC)" "$(is_num "$BC" && in_range "$BC" 0 3000 && echo ok || echo fail)"
 check "battery health in 0..100 (got $BH)" "$(is_num "$BH" && in_range "$BH" 0 100 && echo ok || echo fail)"
+
+# disk keys plausible
+DF=$(field diskfree)
+check "disk free in 1GB..8TB (got $DF)" "$(is_num "$DF" && in_range "$DF" 1073741824 8796093022208 && echo ok || echo fail)"
 
 # CPU temp in plausible band (15-125)
 CV=$(field cpu)
@@ -53,7 +57,7 @@ check "mem in 0..100 (got $MV)" "$(is_num "$MV" && in_range "$MV" 0 100 && echo 
 check "gpu in 0..100 (got $GV)" "$(is_num "$GV" && in_range "$GV" 0 100 && echo ok || echo fail)"
 
 # sensors list non-empty
-FIELDS=$(echo "$OUT" | tr ';' '\n' | grep '=' | grep -vE '^(cpu|battery|cpupct|mempct|gpupct|power|down|up)=')
+FIELDS=$(echo "$OUT" | tr ';' '\n' | grep '=' | grep -vE '^(cpu|battery|cpupct|mempct|gpupct|power|down|up|batcyc|bathealth|diskread|diskwrite|diskfree)=')
 COUNT=$(echo "$FIELDS" | grep -c '=')
 check "at least 5 sensors reported (got $COUNT)" "$([ "$COUNT" -ge 5 ] && echo ok || echo fail)"
 

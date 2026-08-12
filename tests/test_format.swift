@@ -41,6 +41,14 @@ struct FormatTests {
         check("pct 段定长", segPct[0].count == segPct[1].count)
         check("power 段定长", segPwr[0].count == segPwr[1].count && segPwr[1].count == segPwr[2].count)
 
+        // freeText 边界
+        check("17.8GB -> 17G", Format.freeText(17800364032) == "17G")
+        check("512GB -> 512G", Format.freeText(512 * 1073741824) == "512G")
+        check("1.5TB -> 1.5T", Format.freeText(1.5 * 1099511627776) == "1.5T")
+        check("10TB -> 10T", Format.freeText(10 * 1099511627776) == "10T")
+        check("800MB -> 800M", Format.freeText(800 * 1048576) == "800M")
+        check("freeText <= 4 chars", Format.freeText(99 * 1099511627776).count <= 4)
+
         print("\nRESULT: \(pass) passed, \(fail) failed")
         exit(fail == 0 ? 0 : 1)
     }

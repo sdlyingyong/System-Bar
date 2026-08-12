@@ -12,6 +12,7 @@ struct SystemBarApp: App {
     @AppStorage("show.gpuUsage") private var showGpuUsage = false
     @AppStorage("show.power") private var showPower = true
     @AppStorage("show.net") private var showNet = true
+    @AppStorage("show.disk") private var showDisk = true
 
     var body: some Scene {
         MenuBarExtra {
@@ -52,6 +53,9 @@ struct SystemBarApp: App {
         if showNet, let d = monitor.downSpeed, let u = monitor.upSpeed {
             out += AttributedString(" ↓" + Format.pad(Format.speedText(d), 4) + " ↑" + Format.pad(Format.speedText(u), 4))
         }
+        if showDisk, let r = monitor.diskRead, let w = monitor.diskWrite, let f = monitor.diskFree {
+            out += AttributedString(" R" + Format.pad(Format.speedText(r), 4) + " W" + Format.pad(Format.speedText(w), 4) + " " + Format.pad(Format.freeText(f), 3))
+        }
         return out
     }
 
@@ -70,6 +74,7 @@ struct SystemBarApp: App {
                 Toggle("GPU 占用", isOn: $showGpuUsage)
                 Toggle("实时功耗", isOn: $showPower)
                 Toggle("上传下载", isOn: $showNet)
+                Toggle("磁盘", isOn: $showDisk)
             }
             .toggleStyle(.checkbox)
 

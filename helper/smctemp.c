@@ -412,6 +412,61 @@ static void battery_health(double *cycles, double *health) {
     else *health = -1;
 }
 
+/* ---- disk speeds via IOBlockStorageDriver Statistics + free space ---- */
+
+#include <sys/statvfs.h>
+
+static uint64_t disk_prev_r = 0, disk_prev_w = 0;
+static int disk_prev_valid = 0;
+
+static int read_disk_totals(uint64_t *r, uint64_t *w) {
+    io_iterator_t iter;
+    if (IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching("IOBlockStorageDriver"), &iter) != KERN_SUCCESS)
+        return -1;
+    uint64_t r_ = 0, w_ = 0;
+    io_registry_entry_t svc;
+    while ((svc = IOIteratorNext(iter))) {
+        CFTypeRef stats = IORegistryEntryCreateCFProperty(svc, CFSTR("Statistics"), kCFAllocatorDefault, 0);
+        IOObjectRelease(svc);
+        if (!stats || CFGetTypeID(stats) != CFDictionaryGetTypeID()) { if (stats) CFRelease(stats); continue; }
+        CFTypeRef br = CFDictionaryGetValue((CFDictionaryRef)stats, CFSTR("Bytes (Read)"));
+        CFTypeRef bw = CFDictionaryGetValue((CFDictionaryRef)stats, CFSTR("Bytes (Write)"));
+        double dr = 0, dw = 0;
+        if (br && CFGetTypeID(br) == CFNumberGetTypeID()) CFNumberGetValue((CFNumberRef)br, kCFNumberDoubleType, &dr);
+        if (bw && CFGetTypeID(bw) == CFNumberGetTypeID()) CFNumberGetValue((CFNumberRef)bw, kCFNumberDoubleType, &dw);
+        r_ += (uint64_t)dr;
+        w_ += (uint64_t)dw;
+        CFRelease(stats);
+    }
+    IOObjectRelease(iter);
+    *r = r_; *w = w_;
+    return 0;
+}
+
+// Returns -1 on first call (warm-up); else 0 with B/s in *rd/*wr.
+static int disk_speeds(double dt_sec, double *rd, double *wr) {
+    uint64_t r = 0, w = 0;
+    if (read_disk_totals(&r, &w) != 0) return -1;
+    if (!disk_prev_valid) {
+        disk_prev_r = r;
+        disk_prev_w = w;
+        disk_prev_valid = 1;
+        return -1;
+    }
+    if (dt_sec <= 0) return -1;
+    *rd = (double)(r - disk_prev_r) / dt_sec;
+    *wr = (double)(w - disk_prev_w) / dt_sec;
+    disk_prev_r = r;
+    disk_prev_w = w;
+    return 0;
+}
+
+static double disk_free(void) {
+    struct statvfs s;
+    if (statvfs("/", &s) != 0) return -1;
+    return (double)s.f_bavail * s.f_frsize;
+}
+
 /* ---- sampling ---- */
 
 static void sample(void) {
@@ -440,6 +495,10 @@ static void sample(void) {
     double cycles = -1, health = -1;
     battery_health(&cycles, &health);
 
+    double dread = -1, dwrite = -1;
+    disk_speeds(dt_sec, &dread, &dwrite);
+    double dfree = disk_free();
+
 #define EMIT(key, val) do { \
         int m = snprintf(buf + off, sizeof(buf) - off, "%s%s=%.1f", off ? ";" : "", key, val); \
         if (m > 0) off += (size_t)m; \
@@ -455,6 +514,9 @@ static void sample(void) {
     EMIT("up", up);
     EMIT("batcyc", cycles);
     EMIT("bathealth", health);
+    EMIT("diskread", dread);
+    EMIT("diskwrite", dwrite);
+    EMIT("diskfree", dfree);
 
     for (int i = 0; i < nsensors; i++) {
         double v = read_temp(sensors[i].service);
