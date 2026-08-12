@@ -5,6 +5,11 @@ import AppKit
 struct SystemBarApp: App {
     @StateObject private var monitor = TempMonitor()
     @StateObject private var procMonitor = ProcMonitor()
+    private let panelCloser = PanelCloser()
+
+    init() {
+        panelCloser.start()
+    }
 
     @AppStorage("show.cpuTemp") private var showCpuTemp = true
     @AppStorage("show.batteryTemp") private var showBatteryTemp = false
