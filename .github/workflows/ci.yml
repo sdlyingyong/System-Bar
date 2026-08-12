@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Formatting tests (all platforms)
+        run: ./tests/test_format.sh
+
+      - name: Helper tests (Apple Silicon only)
+        if: runner.arch == 'ARM64'
+        run: ./tests/test_smctemp.sh
+
+      - name: Full build
+        run: ./scripts/build.sh
+
+      - name: Verify bundle
+        run: |
+          test -f build/System-Bar.app/Contents/MacOS/System-Bar
+          test -f build/System-Bar.app/Contents/MacOS/smctemp
+          echo "bundle OK"
