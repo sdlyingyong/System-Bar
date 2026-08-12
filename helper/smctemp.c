@@ -235,8 +235,9 @@ static double power_watts(double dt_sec) {
     if (!delta || dt_sec <= 0) return -1;
 
     CFArrayRef arr = (CFArrayRef)CFDictionaryGetValue((CFDictionaryRef)delta, CFSTR("IOReportChannels"));
+    /* macmon 口径: all_power = CPU Energy + GPU Energy + ANE (SoC) */
     double total = 0;
-    double cpu_total = 0, cpu_cluster = 0, gpu = 0;
+    double cpu_total = 0, cpu_cluster = 0, gpu = 0, ane = 0;
     if (arr) {
         CFIndex n = CFArrayGetCount(arr);
         for (CFIndex i = 0; i < n; i++) {
@@ -258,22 +259,15 @@ static double power_watts(double dt_sec) {
             else if (strcmp(ubuf, "uJ") == 0) w = per_sec / 1e6;
             else if (strcmp(ubuf, "nJ") == 0) w = per_sec / 1e9;
 
-            /* Only count authoritative totals / subsystems. Per-core,
-             * cluster and DTL channels are subsets of "CPU Energy" and
-             * would double-count. */
+            /* Only authoritative totals count; per-core, cluster and DTL
+             * channels are subsets of "CPU Energy" and would double-count. */
             if (strcmp(nbuf, "CPU Energy") == 0) cpu_total += w;
             else if (strcmp(nbuf, "PCPU") == 0 || strcmp(nbuf, "ECPU") == 0) cpu_cluster += w;
             else if (strcmp(nbuf, "GPU Energy") == 0) gpu += w;
-            else if (strncmp(nbuf, "ANE", 3) == 0 || strncmp(nbuf, "DRAM", 4) == 0 ||
-                     strncmp(nbuf, "GPU SRAM", 8) == 0 || strncmp(nbuf, "ISP", 3) == 0 ||
-                     strncmp(nbuf, "DISP", 4) == 0 || strncmp(nbuf, "AVE", 3) == 0 ||
-                     strncmp(nbuf, "MSR", 3) == 0 || strncmp(nbuf, "PCIe Port", 9) == 0 ||
-                     strncmp(nbuf, "apciec", 6) == 0 || strncmp(nbuf, "AMCC", 4) == 0 ||
-                     strncmp(nbuf, "DCS", 3) == 0 || strncmp(nbuf, "FAB", 3) == 0 ||
-                     strncmp(nbuf, "AFR", 3) == 0) total += w;
+            else if (strncmp(nbuf, "ANE", 3) == 0) ane += w;
         }
     }
-    total += (cpu_total > 0 ? cpu_total : cpu_cluster) + gpu;
+    total += (cpu_total > 0 ? cpu_total : cpu_cluster) + gpu + ane;
     CFRelease(delta);
     return total;
 }
