@@ -72,6 +72,7 @@ extern void *IOReportCreateSubscription(void *driver, void *desired, void **subs
 extern void *IOReportCreateSamples(void *sub, void *subscribed, void *config);
 extern void *IOReportCreateSamplesDelta(void *prev, void *cur, void *config);
 extern CFStringRef IOReportChannelGetGroup(void *ch);
+extern CFStringRef IOReportChannelGetChannelName(void *ch);
 extern CFStringRef IOReportChannelGetUnitLabel(void *ch);
 extern int64_t IOReportSimpleGetIntegerValue(void *ch, int idx);
 
@@ -235,6 +236,7 @@ static double power_watts(double dt_sec) {
 
     CFArrayRef arr = (CFArrayRef)CFDictionaryGetValue((CFDictionaryRef)delta, CFSTR("IOReportChannels"));
     double total = 0;
+    double cpu_total = 0, cpu_cluster = 0, gpu = 0;
     if (arr) {
         CFIndex n = CFArrayGetCount(arr);
         for (CFIndex i = 0; i < n; i++) {
@@ -242,16 +244,36 @@ static double power_watts(double dt_sec) {
             CFStringRef grp = IOReportChannelGetGroup(ch);
             if (!grp || CFStringCompare(grp, CFSTR("Energy Model"), 0) != kCFCompareEqualTo)
                 continue;
+            CFStringRef name = IOReportChannelGetChannelName(ch);
+            if (!name) continue;
+            char nbuf[64] = {0};
+            CFStringGetCString(name, nbuf, sizeof(nbuf), kCFStringEncodingUTF8);
             CFStringRef unit = IOReportChannelGetUnitLabel(ch);
             char ubuf[16] = {0};
             if (unit) CFStringGetCString(unit, ubuf, sizeof(ubuf), kCFStringEncodingUTF8);
             int64_t val = IOReportSimpleGetIntegerValue(ch, 0);
             double per_sec = (double)val / dt_sec;
-            if (strcmp(ubuf, "mJ") == 0) total += per_sec / 1e3;
-            else if (strcmp(ubuf, "uJ") == 0) total += per_sec / 1e6;
-            else if (strcmp(ubuf, "nJ") == 0) total += per_sec / 1e9;
+            double w = 0;
+            if (strcmp(ubuf, "mJ") == 0) w = per_sec / 1e3;
+            else if (strcmp(ubuf, "uJ") == 0) w = per_sec / 1e6;
+            else if (strcmp(ubuf, "nJ") == 0) w = per_sec / 1e9;
+
+            /* Only count authoritative totals / subsystems. Per-core,
+             * cluster and DTL channels are subsets of "CPU Energy" and
+             * would double-count. */
+            if (strcmp(nbuf, "CPU Energy") == 0) cpu_total += w;
+            else if (strcmp(nbuf, "PCPU") == 0 || strcmp(nbuf, "ECPU") == 0) cpu_cluster += w;
+            else if (strcmp(nbuf, "GPU Energy") == 0) gpu += w;
+            else if (strncmp(nbuf, "ANE", 3) == 0 || strncmp(nbuf, "DRAM", 4) == 0 ||
+                     strncmp(nbuf, "GPU SRAM", 8) == 0 || strncmp(nbuf, "ISP", 3) == 0 ||
+                     strncmp(nbuf, "DISP", 4) == 0 || strncmp(nbuf, "AVE", 3) == 0 ||
+                     strncmp(nbuf, "MSR", 3) == 0 || strncmp(nbuf, "PCIe Port", 9) == 0 ||
+                     strncmp(nbuf, "apciec", 6) == 0 || strncmp(nbuf, "AMCC", 4) == 0 ||
+                     strncmp(nbuf, "DCS", 3) == 0 || strncmp(nbuf, "FAB", 3) == 0 ||
+                     strncmp(nbuf, "AFR", 3) == 0) total += w;
         }
     }
+    total += (cpu_total > 0 ? cpu_total : cpu_cluster) + gpu;
     CFRelease(delta);
     return total;
 }
