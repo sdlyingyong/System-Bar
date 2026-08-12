@@ -4,6 +4,7 @@ import AppKit
 @main
 struct SystemBarApp: App {
     @StateObject private var monitor = TempMonitor()
+    @StateObject private var procMonitor = ProcMonitor()
 
     @AppStorage("show.cpuTemp") private var showCpuTemp = true
     @AppStorage("show.batteryTemp") private var showBatteryTemp = false
@@ -89,6 +90,41 @@ struct SystemBarApp: App {
                 Text("今日最高 CPU \(monitor.todayCpu.map { "\(Int($0.rounded()))°" } ?? "--") / 电池 \(monitor.todayBattery.map { "\(Int($0.rounded()))°" } ?? "--")")
                     .font(.callout)
                     .foregroundStyle(.secondary)
+            }
+
+            Divider()
+
+            Text("进程 · CPU 占用")
+                .font(.headline)
+            if let msg = procMonitor.killMessage {
+                Text(msg)
+                    .font(.callout)
+                    .foregroundStyle(msg.contains("无法结束") ? .red : .secondary)
+            }
+            if procMonitor.procs.isEmpty {
+                Text("加载中…")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(procMonitor.procs) { p in
+                    Menu {
+                        Button("强制结束（PID \(p.pid)）", role: .destructive) {
+                            procMonitor.kill(p.pid)
+                        }
+                    } label: {
+                        HStack {
+                            Text(p.name)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                            Spacer()
+                            Text("\(Int(p.cpuPct.rounded()))%")
+                                .monospacedDigit()
+                            Text("\(Int(p.rssMB.rounded()))MB")
+                                .monospacedDigit()
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
             }
 
             Divider()

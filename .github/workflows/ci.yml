@@ -26,6 +26,9 @@ jobs:
       - name: DailyLog tests (all platforms)
         run: ./tests/test_dailylog.sh
 
+      - name: ProcMonitor tests (all platforms)
+        run: ./tests/test_procmon.sh
+
       - name: Helper tests (Apple Silicon only)
         if: runner.arch == 'ARM64'
         run: ./tests/test_smctemp.sh
