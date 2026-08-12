@@ -51,11 +51,9 @@ struct MenuTempApp: App {
         return out
     }
 
-    /// 电池温度老化提醒符号：≤35 无 / 35–40 ⚠️ / >40 🔥
+    /// 电池温度提醒符号：≤40 无 / >40 🔥
     private func batterySymbol(_ t: Double) -> String {
-        if t > 40 { return "🔥" }
-        if t > 35 { return "⚠️" }
-        return ""
+        t > 40 ? "🔥" : ""
     }
 
     private var menuContent: some View {
