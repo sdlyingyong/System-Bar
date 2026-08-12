@@ -107,25 +107,25 @@ struct SystemBarApp: App {
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(procMonitor.procs) { p in
-                    HStack {
-                        Button {
-                            procMonitor.kill(p.pid)
-                        } label: {
+                    Button {
+                        procMonitor.kill(p.pid)
+                    } label: {
+                        HStack(spacing: 6) {
                             Image(systemName: "xmark")
-                                .font(.system(size: 10, weight: .bold))
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(.secondary)
+                            Text(p.name)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                            Spacer()
+                            Text("\(Int(p.memPct.rounded()))%")
+                                .monospacedDigit()
                                 .foregroundStyle(.secondary)
                         }
-                        .buttonStyle(.plain)
-                        .help("强制结束 \(p.name)")
-
-                        Text(p.name)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                        Spacer()
-                        Text("\(Int(p.memPct.rounded()))%")
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(.plain)
+                    .help("强制结束 \(p.name)")
                 }
             }
 
