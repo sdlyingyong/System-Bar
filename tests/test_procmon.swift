@@ -39,7 +39,18 @@ struct ProcMonTests {
         mon.refresh()
         check("refresh 二次刷新正常", !mon.procs.isEmpty)
 
-        // 3. 强杀：kill 后进程退出
+        // 3. 系统进程识别：uid=0（launchd pid 1 的 taskinfo 受保护读不到，但 uidMap 可读）
+        let launchdUid = ProcMonitor.uidMap()[1]
+        check("uidMap 可读 launchd", launchdUid != nil)
+        check("launchd uid=0", launchdUid == 0)
+
+        // 4. 系统进程两段式：第一次点 ✕ 只提示不杀（只测第一次，绝不真杀 launchd）
+        let armed = mon.kill(1)
+        check("系统进程第一次 ✕ 不执行", !armed)
+        check("提示再点一次", mon.killMessage?.contains("再点一次") == true)
+        check("launchd 仍存活（未杀）", ProcMonitor.uidMap()[1] != nil)
+
+        // 5. 强杀：kill 后进程退出
         let target = sleeps[0]
         let ok = mon.kill(target.processIdentifier)
         check("kill 返回成功", ok)
@@ -47,12 +58,12 @@ struct ProcMonTests {
         check("进程已退出 (SIGKILL)", target.terminationStatus == 9)
         check("killMessage 已设置", mon.killMessage?.contains("已强制结束") == true)
 
-        // 4. 杀不存在/无权限进程返回失败并提示
+        // 6. 杀不存在/无权限进程返回失败并提示
         let bad = mon.kill(999999)
         check("无效 PID 返回失败", !bad)
         check("失败提示", mon.killMessage?.contains("无法结束") == true)
 
-        // 5. 排除自身
+        // 7. 排除自身
         check("扫描不含自身", !found.contains { $0.pid == getpid() })
 
         // 清理

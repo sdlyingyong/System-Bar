@@ -122,8 +122,6 @@ struct SystemBarApp: App {
                             .lineLimit(1)
                             .truncationMode(.middle)
                         Spacer()
-                        Text("\(Int(p.cpuPct.rounded()))%")
-                            .monospacedDigit()
                         Text("\(Int(p.memPct.rounded()))%")
                             .monospacedDigit()
                             .foregroundStyle(.secondary)

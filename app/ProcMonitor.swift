@@ -13,6 +13,7 @@ struct ProcInfo: Identifiable, Equatable {
     let cpuPct: Double
     let rssMB: Double
     let memPct: Double
+    let isSystem: Bool
     var id: Int32 { pid }
 }
 
@@ -26,6 +27,8 @@ final class ProcMonitor: ObservableObject {
     private var first = true
     private var timer: Timer?
     private let excludePids: Set<Int32>
+    private var pendingPid: Int32?
+    private var pendingTime = Date.distantPast
 
     init(excludePids: Set<Int32> = []) {
         self.excludePids = excludePids.union([getpid()])
@@ -45,8 +48,26 @@ final class ProcMonitor: ObservableObject {
         timer = nil
     }
 
+    /// 全部进程的 uid（sysctl KERN_PROC_ALL，一次调用，无 per-process 权限限制）。
+    static func uidMap() -> [Int32: UInt32] {
+        var mib = [CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0]
+        var len: size_t = 0
+        guard sysctl(&mib, 4, nil, &len, nil, 0) == 0 else { return [:] }
+        var buf = [UInt8](repeating: 0, count: len)
+        guard sysctl(&mib, 4, &buf, &len, nil, 0) == 0 else { return [:] }
+        let count = len / MemoryLayout<kinfo_proc>.size
+        guard count > 0 else { return [:] }
+        var map: [Int32: UInt32] = [:]
+        let procs = buf.withUnsafeBytes { $0.baseAddress!.assumingMemoryBound(to: kinfo_proc.self) }
+        for i in 0..<count {
+            map[procs[i].kp_proc.p_pid] = procs[i].kp_eproc.e_ucred.cr_uid
+        }
+        return map
+    }
+
     /// 扫描全部进程（不含自身与 helper），用于测试与刷新。
     static func scan(excludePids: Set<Int32>) -> [ProcInfo] {
+        let uids = uidMap()
         let count = c_listallpids(nil, 0)
         guard count > 0 else { return [] }
         var pids = [pid_t](repeating: 0, count: Int(count))
@@ -65,7 +86,8 @@ final class ProcMonitor: ObservableObject {
             if name == "smctemp" { continue }  // 不展示自身 helper
             let rssMB = Double(info.pti_resident_size) / 1048576
             let memPct = totalMem > 0 ? rssMB * 1048576 / totalMem * 100 : 0
-            out.append(ProcInfo(pid: pid, name: name, cpuPct: 0, rssMB: rssMB, memPct: memPct))
+            let isSystem = (uids[pid] ?? UInt32.max) == 0
+            out.append(ProcInfo(pid: pid, name: name, cpuPct: 0, rssMB: rssMB, memPct: memPct, isSystem: isSystem))
         }
         return out
     }
@@ -78,8 +100,9 @@ final class ProcMonitor: ObservableObject {
         mach_timebase_info(&tb)
         let tickToSec = Double(tb.numer) / Double(tb.denom) / 1e9
         let totalMem = Double(ProcessInfo.processInfo.physicalMemory)
+        let uids = ProcMonitor.uidMap()
         var seen: [Int32: Double] = [:]
-        var list: [(pid: Int32, name: String, cpu: Double, rss: Double, mem: Double)] = []
+        var list: [(pid: Int32, name: String, cpu: Double, rss: Double, mem: Double, system: Bool)] = []
 
         let count = c_listallpids(nil, 0)
         if count > 0 {
@@ -101,7 +124,8 @@ final class ProcMonitor: ObservableObject {
                 }
                 let rssMB = Double(info.pti_resident_size) / 1048576
                 let memPct = totalMem > 0 ? rssMB * 1048576 / totalMem * 100 : 0
-                list.append((pid: pid, name: name, cpu: cpu, rss: rssMB, mem: memPct))
+                let isSystem = (uids[pid] ?? UInt32.max) == 0
+                list.append((pid: pid, name: name, cpu: cpu, rss: rssMB, mem: memPct, system: isSystem))
             }
         }
         prevCpu = seen
@@ -110,12 +134,27 @@ final class ProcMonitor: ObservableObject {
         procs = list
             .sorted { $0.rss > $1.rss }
             .prefix(7)
-            .map { ProcInfo(pid: $0.pid, name: $0.name, cpuPct: $0.cpu, rssMB: $0.rss, memPct: $0.mem) }
+            .map { ProcInfo(pid: $0.pid, name: $0.name, cpuPct: $0.cpu, rssMB: $0.rss, memPct: $0.mem, isSystem: $0.system) }
     }
 
-    /// 强制结束进程；返回是否成功。
+    /// 强制结束进程。系统进程（root 属主）需 5s 内连点两次 ✕ 确认。
+    /// 返回是否实际执行了强杀。
     @discardableResult
     func kill(_ pid: Int32) -> Bool {
+        let isSystem = (ProcMonitor.uidMap()[pid] ?? UInt32.max) == 0
+        if isSystem {
+            if let pending = pendingPid, pending == pid, Date().timeIntervalSince(pendingTime) < 5 {
+                pendingPid = nil
+            } else {
+                pendingPid = pid
+                pendingTime = Date()
+                let name = procs.first { $0.pid == pid }?.name ?? "\(pid)"
+                killMessage = "\(name) 是系统进程，再点一次 ✕ 确认强杀"
+                return false
+            }
+        } else {
+            pendingPid = nil
+        }
         let ok = Darwin.kill(pid, SIGKILL) == 0
         if ok {
             killMessage = "已强制结束 PID \(pid)"
