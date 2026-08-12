@@ -19,31 +19,39 @@ struct MenuTempApp: App {
             HStack(spacing: 3) {
                 Image(systemName: "thermometer.medium")
                     .font(.system(size: 11, weight: .medium))
-                if showCpuTemp, let v = monitor.cpuTemp {
-                    Text("\(Int(v.rounded()))°")
-                }
-                if showBatteryTemp, let v = monitor.batteryTemp {
-                    Text("B")
-                        .opacity(0.65)
-                    Text("\(Int(v.rounded()))°")
-                        .foregroundStyle(batteryColor(v))
-                }
-                if showCpuUsage, let v = monitor.cpuUsage {
-                    Text("\(Int(v.rounded()))%")
-                }
-                if showMemUsage, let v = monitor.memUsage {
-                    Text("M\(Int(v.rounded()))%")
-                }
-                if showGpuUsage, let v = monitor.gpuUsage {
-                    Text("G\(Int(v.rounded()))%")
-                }
-                if showPower, let v = monitor.power {
-                    Text(String(format: "%.1fW", v))
-                }
+                Text(labelAttributed)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
             }
-            .font(.system(size: 12, weight: .medium, design: .rounded))
         }
         .menuBarExtraStyle(.menu)
+    }
+
+    /// 所有启用的指标拼成一个 AttributedString（菜单栏渲染最稳），
+    /// 电池温度数字按老化风险着色。
+    private var labelAttributed: AttributedString {
+        var out = AttributedString()
+        if showCpuTemp, let v = monitor.cpuTemp {
+            out += AttributedString(" \(Int(v.rounded()))°")
+        }
+        if showBatteryTemp, let v = monitor.batteryTemp {
+            out += AttributedString(" B")
+            var num = AttributedString("\(Int(v.rounded()))°")
+            num.foregroundColor = batteryColor(v)
+            out += num
+        }
+        if showCpuUsage, let v = monitor.cpuUsage {
+            out += AttributedString(" \(Int(v.rounded()))%")
+        }
+        if showMemUsage, let v = monitor.memUsage {
+            out += AttributedString(" M\(Int(v.rounded()))%")
+        }
+        if showGpuUsage, let v = monitor.gpuUsage {
+            out += AttributedString(" G\(Int(v.rounded()))%")
+        }
+        if showPower, let v = monitor.power {
+            out += AttributedString(String(format: " %.1fW", v))
+        }
+        return out
     }
 
     /// 电池温度老化风险分级：≤35 正常 / 35–50 黄 / ≥50 红
