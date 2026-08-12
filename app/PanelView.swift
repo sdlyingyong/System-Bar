@@ -1,15 +1,9 @@
 import SwiftUI
-import AppKit
 
-@main
-struct SystemBarApp: App {
-    @StateObject private var monitor = TempMonitor()
-    @StateObject private var procMonitor = ProcMonitor()
-    private let panelCloser = PanelCloser()
-
-    init() {
-        panelCloser.start()
-    }
+/// 弹出面板内容：指标开关 / 电池健康 / 今日最高 / 进程管理 / 退出。
+struct PanelView: View {
+    @ObservedObject var monitor: TempMonitor
+    @ObservedObject var procMonitor: ProcMonitor
 
     @AppStorage("show.cpuTemp") private var showCpuTemp = true
     @AppStorage("show.batteryTemp") private var showBatteryTemp = false
@@ -20,57 +14,7 @@ struct SystemBarApp: App {
     @AppStorage("show.net") private var showNet = true
     @AppStorage("show.disk") private var showDisk = true
 
-    var body: some Scene {
-        MenuBarExtra {
-            menuContent
-        } label: {
-            HStack(spacing: 3) {
-                Image(systemName: "thermometer.medium")
-                    .font(.system(size: 11, weight: .medium))
-                Text(labelAttributed)
-                    .font(.system(size: 12, weight: .medium, design: .rounded).monospacedDigit())
-            }
-        }
-        .menuBarExtraStyle(.window)
-    }
-
-    /// 所有启用的指标拼成一个 AttributedString；各段固定宽度 + 等宽数字，
-    /// 数值位数变化时菜单栏不跳动。
-    private var labelAttributed: AttributedString {
-        var out = AttributedString()
-        if showCpuTemp, let v = monitor.cpuTemp {
-            out += AttributedString(" " + String(format: "%3d°", Int(v.rounded())))
-        }
-        if showBatteryTemp, let v = monitor.batteryTemp {
-            out += AttributedString(" " + batterySymbol(v) + "B" + String(format: "%3d°", Int(v.rounded())))
-        }
-        if showCpuUsage, let v = monitor.cpuUsage {
-            out += AttributedString(" " + String(format: "%3d%%", Int(v.rounded())))
-        }
-        if showMemUsage, let v = monitor.memUsage {
-            out += AttributedString(" M" + String(format: "%3d%%", Int(v.rounded())))
-        }
-        if showGpuUsage, let v = monitor.gpuUsage {
-            out += AttributedString(" G" + String(format: "%3d%%", Int(v.rounded())))
-        }
-        if showPower, let v = monitor.power {
-            out += AttributedString(" " + String(format: "%5.1fW", v))
-        }
-        if showNet, let d = monitor.downSpeed, let u = monitor.upSpeed {
-            out += AttributedString(" ↓" + Format.pad(Format.speedText(d), 4) + " ↑" + Format.pad(Format.speedText(u), 4))
-        }
-        if showDisk, let r = monitor.diskRead, let w = monitor.diskWrite, let f = monitor.diskFree {
-            out += AttributedString(" R" + Format.pad(Format.speedText(r), 4) + " W" + Format.pad(Format.speedText(w), 4) + " " + Format.pad(Format.freeText(f), 3))
-        }
-        return out
-    }
-
-    /// 电池温度提醒符号：≤40 无 / >40 🔥
-    private func batterySymbol(_ t: Double) -> String {
-        t > 40 ? "🔥" : ""
-    }
-
-    private var menuContent: some View {
+    var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Group {
                 Toggle("CPU 温度", isOn: $showCpuTemp)

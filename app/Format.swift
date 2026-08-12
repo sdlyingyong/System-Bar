@@ -30,4 +30,9 @@ enum Format {
         if bytes >= 1073741824 { return "\(Int((bytes / 1073741824).rounded()))G" }
         return "\(Int((bytes / 1048576).rounded()))M"
     }
+
+    /// 电池温度提醒符号：≤40 无 / >40 🔥
+    static func batterySymbol(_ t: Double) -> String {
+        t > 40 ? "🔥" : ""
+    }
 }

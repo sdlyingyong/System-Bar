@@ -19,7 +19,7 @@ macOS 菜单栏实时系统指标显示（Apple Silicon），最小开销、免 
 
 ## 系统要求
 
-- macOS 13+（`MenuBarExtra`）
+- macOS 13+
 - Apple Silicon（M1 实测；M2–M5 传感器命名可能略有差异，已做回退）
 
 ## 安装（一条命令）

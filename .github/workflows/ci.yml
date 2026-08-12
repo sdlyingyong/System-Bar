@@ -29,8 +29,6 @@ jobs:
       - name: ProcMonitor tests (all platforms)
         run: ./tests/test_procmon.sh
 
-      - name: PanelDismiss tests (all platforms)
-        run: ./tests/test_paneldismiss.sh
 
       - name: Helper tests (Apple Silicon only)
         if: runner.arch == 'ARM64'
