@@ -94,7 +94,7 @@ struct SystemBarApp: App {
 
             Divider()
 
-            Text("进程 · CPU 占用")
+            Text("进程 · 内存占用")
                 .font(.headline)
             if let msg = procMonitor.killMessage {
                 Text(msg)

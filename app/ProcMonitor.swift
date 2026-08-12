@@ -89,7 +89,7 @@ final class ProcMonitor: ObservableObject {
         first = false
 
         procs = list
-            .sorted { first ? $0.rss > $1.rss : $0.cpu > $1.cpu }
+            .sorted { $0.rss > $1.rss }
             .prefix(10)
             .map { ProcInfo(pid: $0.pid, name: $0.name, cpuPct: $0.cpu, rssMB: $0.rss) }
     }
