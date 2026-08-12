@@ -384,6 +384,34 @@ static int net_speeds(double dt_sec, double *down, double *up) {
     return 0;
 }
 
+/* ---- battery health via AppleSmartBattery IORegistry ---- */
+
+static double battery_prop(const char *key) {
+    io_service_t svc = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("AppleSmartBattery"));
+    if (!svc) return -1;
+    CFStringRef ks = CFStringCreateWithCString(kCFAllocatorDefault, key, kCFStringEncodingUTF8);
+    CFTypeRef v = IORegistryEntryCreateCFProperty(svc, ks, kCFAllocatorDefault, 0);
+    CFRelease(ks);
+    IOObjectRelease(svc);
+    if (!v || CFGetTypeID(v) != CFNumberGetTypeID()) {
+        if (v) CFRelease(v);
+        return -1;
+    }
+    double out = 0;
+    CFNumberGetValue((CFNumberRef)v, kCFNumberDoubleType, &out);
+    CFRelease(v);
+    return out;
+}
+
+/* cycle count + health % (current max capacity / design capacity). */
+static void battery_health(double *cycles, double *health) {
+    *cycles = battery_prop("CycleCount");
+    double design = battery_prop("DesignCapacity");
+    double cur = battery_prop("AppleRawMaxCapacity");
+    if (design > 0 && cur >= 0) *health = cur / design * 100.0;
+    else *health = -1;
+}
+
 /* ---- sampling ---- */
 
 static void sample(void) {
@@ -409,6 +437,9 @@ static void sample(void) {
     double down = -1, up = -1;
     net_speeds(dt_sec, &down, &up);
 
+    double cycles = -1, health = -1;
+    battery_health(&cycles, &health);
+
 #define EMIT(key, val) do { \
         int m = snprintf(buf + off, sizeof(buf) - off, "%s%s=%.1f", off ? ";" : "", key, val); \
         if (m > 0) off += (size_t)m; \
@@ -422,6 +453,8 @@ static void sample(void) {
     EMIT("power", power);
     EMIT("down", down);
     EMIT("up", up);
+    EMIT("batcyc", cycles);
+    EMIT("bathealth", health);
 
     for (int i = 0; i < nsensors; i++) {
         double v = read_temp(sensors[i].service);

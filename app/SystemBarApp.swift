@@ -75,6 +75,13 @@ struct SystemBarApp: App {
 
             Divider()
 
+            if let health = monitor.batteryHealth {
+                Text("电池健康 \(Int(health.rounded()))% · \(monitor.batteryCycles.map { "\(Int($0.rounded())) 次循环" } ?? "")")
+                    .font(.callout)
+            }
+
+            Divider()
+
             Button("退出 System-Bar") {
                 monitor.stop()
                 NSApplication.shared.terminate(nil)

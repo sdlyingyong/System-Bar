@@ -26,11 +26,17 @@ RC=$?
 check "exit code 0 (got $RC)" "$([ "$RC" -eq 0 ] && echo ok || echo fail)"
 
 # required metric keys present
-for k in cpu battery cpupct mempct gpupct power; do
+for k in cpu battery cpupct mempct gpupct power down up batcyc bathealth; do
     check "has key $k" "$([[ "$OUT" == *";$k="* || "$OUT" == "$k="* ]] && echo ok || echo fail)"
 done
 
 field() { echo "$OUT" | tr ';' '\n' | grep "^$1=" | head -1 | cut -d= -f2; }
+
+# battery health plausible
+BC=$(field batcyc)
+BH=$(field bathealth)
+check "battery cycles in 0..3000 (got $BC)" "$(is_num "$BC" && in_range "$BC" 0 3000 && echo ok || echo fail)"
+check "battery health in 0..100 (got $BH)" "$(is_num "$BH" && in_range "$BH" 0 100 && echo ok || echo fail)"
 
 # CPU temp in plausible band (15-125)
 CV=$(field cpu)

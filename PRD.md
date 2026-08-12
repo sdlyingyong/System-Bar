@@ -23,7 +23,8 @@
 | 内存占用 | % | used / total 内存 | `host_statistics64`（待验证） |
 | GPU 占用 | % | GPU 利用率 | AGXAccelerator（已验证） |
 | 实时功耗 | W | macmon 口径：CPU+GPU+ANE | IOReport（已验证） |
-| 上传/下载速度 | KB/s·MB/s | 活动网卡字节计数差值 | sysctl iflist2（待验证） |
+| 上传/下载速度 | KB/s·MB/s | 活动网卡字节计数差值 | sysctl iflist2（已验证） |
+| 电池健康 | % + 循环次数 | 当前容量/设计容量、循环次数 | AppleSmartBattery IORegistry（待验证） |
 
 ## 3. 非目标（明确不做）
 
@@ -73,6 +74,7 @@ C helper (smctemp)  常驻进程
   - `> 40°C`：特别提醒（高温）→ `🔥`
 - 下拉菜单：
   - **指标开关组**：CPU 温度 / 电池温度 / CPU 占用 / 内存占用 / GPU 占用 / 实时功耗 / 上传下载（Toggle，即时生效并持久化）
+  - **电池健康行**：`电池健康 92% · 120 次循环`（数据可用时显示，无需开关）
   - 「退出」
 - 无 Dock 图标（`LSUIElement`）
 - **防跳动**：数字显示采用固定宽度 + 等宽数字（温度/百分比 3 位、功耗 5 字符、网速 4 字符右对齐），数值位数变化时菜单栏布局不变

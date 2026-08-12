@@ -10,6 +10,8 @@ final class TempMonitor: ObservableObject {
     @Published private(set) var power: Double?
     @Published private(set) var downSpeed: Double?
     @Published private(set) var upSpeed: Double?
+    @Published private(set) var batteryCycles: Double?
+    @Published private(set) var batteryHealth: Double?
 
     private var process: Process?
     private var buffer = Data()
@@ -91,6 +93,8 @@ final class TempMonitor: ObservableObject {
         power = take("power")
         downSpeed = take("down")
         upSpeed = take("up")
+        batteryCycles = take("batcyc")
+        batteryHealth = take("bathealth")
     }
 
     func stop() {
