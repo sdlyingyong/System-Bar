@@ -26,7 +26,7 @@ struct SystemBarApp: App {
                     .font(.system(size: 12, weight: .medium, design: .rounded).monospacedDigit())
             }
         }
-        .menuBarExtraStyle(.menu)
+        .menuBarExtraStyle(.window)
     }
 
     /// 所有启用的指标拼成一个 AttributedString；各段固定宽度 + 等宽数字，
@@ -66,7 +66,7 @@ struct SystemBarApp: App {
     }
 
     private var menuContent: some View {
-        VStack {
+        VStack(alignment: .leading, spacing: 4) {
             Group {
                 Toggle("CPU 温度", isOn: $showCpuTemp)
                 Toggle("电池温度", isOn: $showBatteryTemp)
@@ -137,5 +137,7 @@ struct SystemBarApp: App {
             }
             .keyboardShortcut("q")
         }
+        .padding(10)
+        .frame(width: 330)
     }
 }
