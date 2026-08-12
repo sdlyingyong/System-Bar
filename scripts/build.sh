@@ -12,8 +12,8 @@ clang -O2 -Wall -framework CoreFoundation -framework IOKit -lIOReport \
     "$ROOT/helper/smctemp.c" -o "$OUT/smctemp"
 
 echo "[2/4] compiling System-Bar app..."
-swiftc -O -parse-as-library \
-    "$ROOT/app/AppDelegate.swift" "$ROOT/app/PanelView.swift" "$ROOT/app/TempMonitor.swift" "$ROOT/app/Format.swift" "$ROOT/app/DailyLog.swift" "$ROOT/app/ProcMonitor.swift" \
+swiftc -O \
+    "$ROOT/app/AppDelegate.swift" "$ROOT/app/main.swift" "$ROOT/app/PanelView.swift" "$ROOT/app/TempMonitor.swift" "$ROOT/app/Format.swift" "$ROOT/app/DailyLog.swift" "$ROOT/app/ProcMonitor.swift" \
     -o "$OUT/System-Bar" -framework SwiftUI -framework AppKit
 
 echo "[3/4] assembling bundle..."

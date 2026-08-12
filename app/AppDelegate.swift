@@ -4,7 +4,7 @@ import Combine
 
 /// System-Bar 入口：NSStatusItem（状态栏文字）+ NSPopover（面板）。
 /// 不用 MenuBarExtra（macOS 13 上状态栏项会消失、面板关闭状态错乱）。
-@main
+
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private let popover = NSPopover()
