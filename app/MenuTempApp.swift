@@ -21,44 +21,56 @@ struct MenuTempApp: App {
                 Image(systemName: "thermometer.medium")
                     .font(.system(size: 11, weight: .medium))
                 Text(labelAttributed)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .font(.system(size: 12, weight: .medium, design: .rounded).monospacedDigit())
             }
         }
         .menuBarExtraStyle(.menu)
     }
 
-    /// 所有启用的指标拼成一个 AttributedString（菜单栏渲染最稳），
-    /// 电池温度数字按老化风险加提醒符号（菜单栏文字颜色不可靠，用符号替代）。
+    /// 所有启用的指标拼成一个 AttributedString；各段固定宽度 + 等宽数字，
+    /// 数值位数变化时菜单栏不跳动。
     private var labelAttributed: AttributedString {
         var out = AttributedString()
         if showCpuTemp, let v = monitor.cpuTemp {
-            out += AttributedString(" \(Int(v.rounded()))°")
+            out += AttributedString(" " + String(format: "%3d°", Int(v.rounded())))
         }
         if showBatteryTemp, let v = monitor.batteryTemp {
-            out += AttributedString(" \(batterySymbol(v))B\(Int(v.rounded()))°")
+            out += AttributedString(" " + batterySymbol(v) + "B" + String(format: "%3d°", Int(v.rounded())))
         }
         if showCpuUsage, let v = monitor.cpuUsage {
-            out += AttributedString(" \(Int(v.rounded()))%")
+            out += AttributedString(" " + String(format: "%3d%%", Int(v.rounded())))
         }
         if showMemUsage, let v = monitor.memUsage {
-            out += AttributedString(" M\(Int(v.rounded()))%")
+            out += AttributedString(" M" + String(format: "%3d%%", Int(v.rounded())))
         }
         if showGpuUsage, let v = monitor.gpuUsage {
-            out += AttributedString(" G\(Int(v.rounded()))%")
+            out += AttributedString(" G" + String(format: "%3d%%", Int(v.rounded())))
         }
         if showPower, let v = monitor.power {
-            out += AttributedString(String(format: " %.1fW", v))
+            out += AttributedString(" " + String(format: "%5.1fW", v))
         }
         if showNet, let d = monitor.downSpeed, let u = monitor.upSpeed {
-            out += AttributedString(" ↓\(speedText(d)) ↑\(speedText(u))")
+            out += AttributedString(" ↓" + pad(speedText(d), 4) + " ↑" + pad(speedText(u), 4))
         }
         return out
     }
 
-    /// B/s → 紧凑显示（B / K / M）
+    /// 右对齐补空格到固定宽度
+    private func pad(_ s: String, _ n: Int) -> String {
+        s.count >= n ? s : String(repeating: " ", count: n - s.count) + s
+    }
+
+    /// B/s → 紧凑显示（B / K / M / G，最多 4 字符）
     private func speedText(_ bps: Double) -> String {
-        if bps >= 1024 * 1024 { return String(format: "%.1fM", bps / 1048576) }
-        if bps >= 1024 { return "\(Int(bps / 1024))K" }
+        if bps >= 1073741824 { return String(format: "%.1fG", bps / 1073741824) }
+        if bps >= 1048576 {
+            let m = bps / 1048576
+            return m >= 100 ? "\(Int(m.rounded()))M" : String(format: "%.1fM", m)
+        }
+        if bps >= 1024 {
+            let k = bps / 1024
+            return k >= 100 ? "\(Int(k.rounded()))K" : String(format: "%.1fK", k)
+        }
         return "\(Int(bps))B"
     }
 
