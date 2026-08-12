@@ -28,9 +28,9 @@ ctx.setFillColor(color(1, 1, 1, 0.06))
 ctx.fill(CGRect(x: 0, y: size * 0.88, width: size, height: size * 0.12))
 
 let cx = size / 2
-let bulbCenter = CGPoint(x: cx, y: 850)
-let bulbR: CGFloat = 104
-let tubeRect = CGRect(x: cx - 104, y: 250, width: 208, height: 600)
+let bulbCenter = CGPoint(x: cx, y: 770)
+let bulbR: CGFloat = 85
+let tubeRect = CGRect(x: cx - 104, y: 300, width: 208, height: 560)
 let mercuryInset: CGFloat = 20
 
 // ---- glass tube (capsule, silver gradient) ----
@@ -42,7 +42,7 @@ let tubeGrad = CGGradient(colorsSpace: cs, colors: [
     color(0.78, 0.84, 0.90),
     color(0.52, 0.60, 0.70),
 ] as CFArray, locations: [0, 0.5, 1])!
-ctx.drawLinearGradient(tubeGrad, start: CGPoint(x: cx, y: 250), end: CGPoint(x: cx, y: 850), options: [])
+ctx.drawLinearGradient(tubeGrad, start: CGPoint(x: cx, y: 300), end: CGPoint(x: cx, y: 860), options: [])
 ctx.resetClip()
 
 // tube outline
@@ -51,13 +51,13 @@ ctx.setLineWidth(10)
 ctx.addPath(tubePath)
 ctx.strokePath()
 
-// ---- mercury: bulb + column ----
+// ---- mercury: bulb + column (blue, fully inside the glass tube) ----
 let bulbRect = CGRect(x: bulbCenter.x - bulbR, y: bulbCenter.y - bulbR,
                       width: bulbR * 2, height: bulbR * 2)
 let merGrad = CGGradient(colorsSpace: cs, colors: [
-    color(1.0, 0.48, 0.28),
-    color(0.94, 0.18, 0.10),
-    color(0.72, 0.05, 0.03),
+    color(0.56, 0.82, 1.0),
+    color(0.24, 0.55, 1.0),
+    color(0.08, 0.28, 0.78),
 ] as CFArray, locations: [0, 0.55, 1])!
 
 func mercuryCapsule(_ rect: CGRect, corner: CGFloat) {
@@ -69,8 +69,8 @@ func mercuryCapsule(_ rect: CGRect, corner: CGFloat) {
 }
 
 mercuryCapsule(bulbRect.insetBy(dx: mercuryInset, dy: mercuryInset), corner: 0)
-let column = CGRect(x: tubeRect.minX + mercuryInset, y: 480,
-                    width: tubeRect.width - mercuryInset * 2, height: bulbCenter.y - 480)
+let column = CGRect(x: tubeRect.minX + mercuryInset, y: 470,
+                    width: tubeRect.width - mercuryInset * 2, height: bulbCenter.y - 470)
 mercuryCapsule(column, corner: (tubeRect.width - mercuryInset * 2) / 2)
 
 // ---- glass highlight on bulb ----
