@@ -6,7 +6,6 @@ import Darwin
 @_silgen_name("proc_pidinfo") private func c_pidinfo(_ pid: Int32, _ f: Int32, _ a: UInt64, _ b: UnsafeMutableRawPointer, _ c: Int32) -> Int32
 @_silgen_name("proc_name") private func c_procname(_ pid: Int32, _ buf: UnsafeMutablePointer<CChar>, _ size: UInt32) -> Int32
 private let PROC_PIDTASKINFO: Int32 = 4
-private let PROC_PIDRUSAGE: Int32 = 5
 
 struct ProcInfo: Identifiable, Equatable {
     let pid: Int32
@@ -69,21 +68,34 @@ final class ProcMonitor: ObservableObject {
 
     func refresh() {
         let wall = Date()
-        var seen: [Int32: Double] = [:]
-        var list: [(pid: Int32, name: String, cpu: Double, rss: Double)] = []
         let wallDelta = wall.timeIntervalSince(lastRefresh)
         lastRefresh = wall
+        var tb = mach_timebase_info_data_t()
+        mach_timebase_info(&tb)
+        let tickToSec = Double(tb.numer) / Double(tb.denom) / 1e9
+        var seen: [Int32: Double] = [:]
+        var list: [(pid: Int32, name: String, cpu: Double, rss: Double)] = []
 
-        for info in ProcMonitor.scan(excludePids: excludePids) {
-            var ru = rusage()
-            guard c_pidinfo(info.pid, PROC_PIDRUSAGE, 0, &ru, Int32(MemoryLayout<rusage>.size)) == MemoryLayout<rusage>.size else { continue }
-            let secs = Double(ru.ru_utime.tv_sec + ru.ru_stime.tv_sec) + Double(ru.ru_utime.tv_usec + ru.ru_stime.tv_usec) / 1e6
-            seen[info.pid] = secs
-            var cpu = 0.0
-            if let prev = prevCpu[info.pid], !first, wallDelta > 0 {
-                cpu = Swift.max(0, (secs - prev) / wallDelta) * 100
+        let count = c_listallpids(nil, 0)
+        if count > 0 {
+            var pids = [pid_t](repeating: 0, count: Int(count))
+            let n = c_listallpids(&pids, count * Int32(MemoryLayout<pid_t>.size))
+            for pid in pids[..<Int(n)] {
+                guard !excludePids.contains(pid) else { continue }
+                var info = proc_taskinfo()
+                guard c_pidinfo(pid, PROC_PIDTASKINFO, 0, &info, Int32(MemoryLayout<proc_taskinfo>.size)) == MemoryLayout<proc_taskinfo>.size else { continue }
+                var buf = [CChar](repeating: 0, count: 64)
+                c_procname(pid, &buf, 64)
+                let name = String(cString: buf)
+                if name == "smctemp" { continue }  // 不展示自身 helper
+                let ticks = Double(info.pti_total_user + info.pti_total_system)
+                seen[pid] = ticks
+                var cpu = 0.0
+                if let prev = prevCpu[pid], !first, wallDelta > 0 {
+                    cpu = Swift.max(0, (ticks - prev) * tickToSec / wallDelta) * 100
+                }
+                list.append((pid: pid, name: name, cpu: cpu, rss: Double(info.pti_resident_size) / 1048576))
             }
-            list.append((pid: info.pid, name: info.name, cpu: cpu, rss: info.rssMB))
         }
         prevCpu = seen
         first = false
