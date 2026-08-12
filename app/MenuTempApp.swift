@@ -43,7 +43,7 @@ struct MenuTempApp: App {
                 Toggle("CPU 占用", isOn: $showCpuUsage)
                 Toggle("内存占用", isOn: $showMemUsage)
                 Toggle("GPU 占用", isOn: $showGpuUsage)
-                Toggle("实时功耗", isOn: $showPower)
+                Toggle("整机功耗", isOn: $showPower)
             }
             .toggleStyle(.checkbox)
 

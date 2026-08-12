@@ -86,7 +86,22 @@ final class TempMonitor: ObservableObject {
         cpuUsage = take("cpupct")
         memUsage = take("mempct")
         gpuUsage = take("gpupct")
-        power = take("power")
+        power = wholeMachinePower() ?? take("power")
+    }
+
+    /// Prefer the root daemon's whole-machine power (SMC PSTR) when fresh;
+    /// otherwise fall back to the SoC power from the helper.
+    private func wholeMachinePower() -> Double? {
+        let path = "/tmp/menutemp_power"
+        guard let mtime = (try? FileManager.default
+            .attributesOfItem(atPath: path)[.modificationDate] as? Date) ?? nil,
+            Date().timeIntervalSince(mtime) < 5,
+            let text = try? String(contentsOfFile: path, encoding: .utf8),
+            let line = text.split(separator: "\n").last,
+            line.hasPrefix("power="),
+            let v = Double(line.dropFirst("power=".count)),
+            v >= 0 else { return nil }
+        return v
     }
 
     func stop() {
