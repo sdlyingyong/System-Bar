@@ -6,6 +6,8 @@
 	<string>MenuTemp</string>
 	<key>CFBundleDisplayName</key>
 	<string>MenuTemp</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.menutemp.app</string>
 	<key>CFBundleVersion</key>

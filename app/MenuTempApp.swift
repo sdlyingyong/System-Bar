@@ -16,8 +16,12 @@ struct MenuTempApp: App {
         MenuBarExtra {
             menuContent
         } label: {
-            Text(labelText)
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+            HStack(spacing: 3) {
+                Image(systemName: "thermometer.medium")
+                    .font(.system(size: 11, weight: .medium))
+                Text(labelText)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+            }
         }
         .menuBarExtraStyle(.menu)
     }

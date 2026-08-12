@@ -22,6 +22,9 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$ROOT/app/Info.plist" "$APP/Contents/Info.plist"
 cp "$OUT/MenuTemp" "$APP/Contents/MacOS/"
 cp "$OUT/smctemp" "$APP/Contents/MacOS/"
+if [ -f "$ROOT/icons/build/AppIcon.icns" ]; then
+    cp "$ROOT/icons/build/AppIcon.icns" "$APP/Contents/Resources/"
+fi
 
 echo "[4/4] signing (ad-hoc)..."
 codesign --force --sign - "$APP" 2>/dev/null
