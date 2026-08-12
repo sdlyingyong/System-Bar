@@ -19,24 +19,38 @@ struct MenuTempApp: App {
             HStack(spacing: 3) {
                 Image(systemName: "thermometer.medium")
                     .font(.system(size: 11, weight: .medium))
-                Text(labelText)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                if showCpuTemp, let v = monitor.cpuTemp {
+                    Text("\(Int(v.rounded()))°")
+                }
+                if showBatteryTemp, let v = monitor.batteryTemp {
+                    Text("B")
+                        .opacity(0.65)
+                    Text("\(Int(v.rounded()))°")
+                        .foregroundStyle(batteryColor(v))
+                }
+                if showCpuUsage, let v = monitor.cpuUsage {
+                    Text("\(Int(v.rounded()))%")
+                }
+                if showMemUsage, let v = monitor.memUsage {
+                    Text("M\(Int(v.rounded()))%")
+                }
+                if showGpuUsage, let v = monitor.gpuUsage {
+                    Text("G\(Int(v.rounded()))%")
+                }
+                if showPower, let v = monitor.power {
+                    Text(String(format: "%.1fW", v))
+                }
             }
+            .font(.system(size: 12, weight: .medium, design: .rounded))
         }
         .menuBarExtraStyle(.menu)
     }
 
-    private var labelText: String {
-        var parts: [String] = []
-        if showCpuTemp, let v = monitor.cpuTemp { parts.append("\(Int(v.rounded()))°") }
-        if showBatteryTemp, let v = monitor.batteryTemp { parts.append("B\(Int(v.rounded()))°") }
-        if showCpuUsage, let v = monitor.cpuUsage { parts.append("\(Int(v.rounded()))%") }
-        if showMemUsage, let v = monitor.memUsage { parts.append("M\(Int(v.rounded()))%") }
-        if showGpuUsage, let v = monitor.gpuUsage { parts.append("G\(Int(v.rounded()))%") }
-        if showPower, let v = monitor.power {
-            parts.append(String(format: "%.1fW", v))
-        }
-        return parts.isEmpty ? "--" : parts.joined(separator: " ")
+    /// 电池温度老化风险分级：≤35 正常 / 35–50 黄 / ≥50 红
+    private func batteryColor(_ t: Double) -> Color {
+        if t >= 50 { return .red }
+        if t > 35 { return .yellow }
+        return .primary
     }
 
     private var menuContent: some View {
