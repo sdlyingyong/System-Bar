@@ -1,4 +1,5 @@
 build/
+helper/smctemp
 .DS_Store
 *.o
 *.dSYM/

@@ -1,15 +1,13 @@
 import Foundation
 
-struct TempReading: Identifiable, Equatable {
-    let name: String
-    let temp: Double
-    var id: String { name }
-}
-
 /// Owns the smctemp helper process and parses its output into published state.
 final class TempMonitor: ObservableObject {
     @Published private(set) var cpuTemp: Double?
-    @Published private(set) var sensors: [TempReading] = []
+    @Published private(set) var batteryTemp: Double?
+    @Published private(set) var cpuUsage: Double?
+    @Published private(set) var memUsage: Double?
+    @Published private(set) var gpuUsage: Double?
+    @Published private(set) var power: Double?
 
     private var process: Process?
     private var buffer = Data()
@@ -72,21 +70,23 @@ final class TempMonitor: ObservableObject {
     }
 
     private func parse(_ line: String) {
-        var newCpu: Double?
-        var seen: [String: Double] = [:]
+        var values: [String: Double] = [:]
         for field in line.split(separator: ";") {
             let kv = field.split(separator: "=", maxSplits: 1)
             guard kv.count == 2, let value = Double(kv[1]) else { continue }
-            let key = String(kv[0])
-            if key == "cpu" {
-                newCpu = value
-            } else {
-                seen[key] = value
-            }
+            values[String(kv[0])] = value
         }
-        if newCpu != nil { cpuTemp = newCpu }
-        sensors = seen.map { TempReading(name: $0.key, temp: $0.value) }
-            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+
+        func take(_ key: String) -> Double? {
+            guard let v = values[key], v >= 0 else { return nil }
+            return v
+        }
+        cpuTemp = take("cpu")
+        batteryTemp = take("battery")
+        cpuUsage = take("cpupct")
+        memUsage = take("mempct")
+        gpuUsage = take("gpupct")
+        power = take("power")
     }
 
     func stop() {

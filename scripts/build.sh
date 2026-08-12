@@ -8,7 +8,7 @@ APP="$OUT/MenuTemp.app"
 mkdir -p "$OUT"
 
 echo "[1/4] compiling smctemp helper..."
-clang -O2 -Wall -framework CoreFoundation \
+clang -O2 -Wall -framework CoreFoundation -framework IOKit -lIOReport \
     "$ROOT/helper/smctemp.c" -o "$OUT/smctemp"
 
 echo "[2/4] compiling MenuTemp app..."
