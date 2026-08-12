@@ -27,17 +27,14 @@ struct MenuTempApp: App {
     }
 
     /// 所有启用的指标拼成一个 AttributedString（菜单栏渲染最稳），
-    /// 电池温度数字按老化风险着色。
+    /// 电池温度数字按老化风险加提醒符号（菜单栏文字颜色不可靠，用符号替代）。
     private var labelAttributed: AttributedString {
         var out = AttributedString()
         if showCpuTemp, let v = monitor.cpuTemp {
             out += AttributedString(" \(Int(v.rounded()))°")
         }
         if showBatteryTemp, let v = monitor.batteryTemp {
-            out += AttributedString(" B")
-            var num = AttributedString("\(Int(v.rounded()))°")
-            num.foregroundColor = batteryColor(v)
-            out += num
+            out += AttributedString(" \(batterySymbol(v))B\(Int(v.rounded()))°")
         }
         if showCpuUsage, let v = monitor.cpuUsage {
             out += AttributedString(" \(Int(v.rounded()))%")
@@ -54,11 +51,11 @@ struct MenuTempApp: App {
         return out
     }
 
-    /// 电池温度老化风险分级：≤35 正常 / 35–50 黄 / ≥50 红
-    private func batteryColor(_ t: Double) -> Color {
-        if t >= 50 { return .red }
-        if t > 35 { return .yellow }
-        return .primary
+    /// 电池温度老化提醒符号：≤35 无 / 35–40 ⚠️ / >40 🔥
+    private func batterySymbol(_ t: Double) -> String {
+        if t > 40 { return "🔥" }
+        if t > 35 { return "⚠️" }
+        return ""
     }
 
     private var menuContent: some View {
