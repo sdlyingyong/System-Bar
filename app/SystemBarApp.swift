@@ -85,6 +85,12 @@ struct SystemBarApp: App {
                     .font(.callout)
             }
 
+            if monitor.todayCpu != nil || monitor.todayBattery != nil {
+                Text("今日最高 CPU \(monitor.todayCpu.map { "\(Int($0.rounded()))°" } ?? "--") / 电池 \(monitor.todayBattery.map { "\(Int($0.rounded()))°" } ?? "--")")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+
             Divider()
 
             Button("退出 System-Bar") {

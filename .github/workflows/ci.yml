@@ -23,6 +23,9 @@ jobs:
       - name: Formatting tests (all platforms)
         run: ./tests/test_format.sh
 
+      - name: DailyLog tests (all platforms)
+        run: ./tests/test_dailylog.sh
+
       - name: Helper tests (Apple Silicon only)
         if: runner.arch == 'ARM64'
         run: ./tests/test_smctemp.sh

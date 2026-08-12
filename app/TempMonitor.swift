@@ -20,11 +20,18 @@ final class TempMonitor: ObservableObject {
     private var buffer = Data()
     private let interval: Int
     private var restarting = false
+    private let dailyLog: DailyLog?
 
     init(interval: Int = 2) {
         self.interval = interval
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        self.dailyLog = try? DailyLog(directory: (support ?? FileManager.default.temporaryDirectory).appendingPathComponent("System-Bar"))
         start()
     }
+
+    /// 今日最高温度（菜单显示用）
+    var todayCpu: Double? { dailyLog?.todayCpu }
+    var todayBattery: Double? { dailyLog?.todayBattery }
 
     func start() {
         guard let helper = helperURL() else { return }
@@ -101,10 +108,12 @@ final class TempMonitor: ObservableObject {
         diskRead = take("diskread")
         diskWrite = take("diskwrite")
         diskFree = take("diskfree")
+        dailyLog?.observe(cpu: cpuTemp, battery: batteryTemp)
     }
 
     func stop() {
         restarting = true
+        dailyLog?.save()
         process?.terminate()
         process = nil
     }
