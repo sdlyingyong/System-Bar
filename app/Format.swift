@@ -35,4 +35,11 @@ enum Format {
     static func batterySymbol(_ t: Double) -> String {
         t > 40 ? "🔥" : ""
     }
+
+    /// 分钟 → "1h 11m"（<=0 显示 --）
+    static func timeText(_ minutes: Double) -> String {
+        let m = Int(minutes.rounded())
+        if m <= 0 { return "--" }
+        return "\(m / 60)h \(String(format: "%02d", m % 60))m"
+    }
 }

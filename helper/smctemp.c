@@ -412,6 +412,14 @@ static void battery_health(double *cycles, double *health) {
     else *health = -1;
 }
 
+/* 剩余可用分钟 = 当前容量(mAh) / 放电电流(mA) * 60；充电/插电时 -1。 */
+static double battery_remain_minutes(void) {
+    double cap = battery_prop("AppleRawCurrentCapacity");
+    double amp = battery_prop("Amperage");
+    if (cap <= 0 || amp >= 0) return -1;
+    return cap / (-amp) * 60.0;
+}
+
 /* ---- disk speeds via IOBlockStorageDriver Statistics + free space ---- */
 
 #include <sys/statvfs.h>
@@ -494,6 +502,7 @@ static void sample(void) {
 
     double cycles = -1, health = -1;
     battery_health(&cycles, &health);
+    double remain = battery_remain_minutes();
 
     double dread = -1, dwrite = -1;
     disk_speeds(dt_sec, &dread, &dwrite);
@@ -514,6 +523,7 @@ static void sample(void) {
     EMIT("up", up);
     EMIT("batcyc", cycles);
     EMIT("bathealth", health);
+    EMIT("batremain", remain);
     EMIT("diskread", dread);
     EMIT("diskwrite", dwrite);
     EMIT("diskfree", dfree);

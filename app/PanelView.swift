@@ -35,6 +35,12 @@ struct PanelView: View {
                     .font(.callout)
             }
 
+            if let remain = monitor.batteryRemain {
+                Text(remain >= 0 ? "电池剩余 \(Format.timeText(remain))" : "电池剩余 --（充电中或已接电源）")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+
             if monitor.todayCpu != nil || monitor.todayBattery != nil {
                 Text("今日最高 CPU \(monitor.todayCpu.map { "\(Int($0.rounded()))°" } ?? "--") / 电池 \(monitor.todayBattery.map { "\(Int($0.rounded()))°" } ?? "--")")
                     .font(.callout)

@@ -49,6 +49,14 @@ struct FormatTests {
         check("800MB -> 800M", Format.freeText(800 * 1048576) == "800M")
         check("freeText <= 4 chars", Format.freeText(99 * 1099511627776).count <= 4)
 
+        // timeText 边界
+        check("71 分钟 -> 1h 11m", Format.timeText(71) == "1h 11m")
+        check("61 分钟 -> 1h 01m", Format.timeText(61) == "1h 01m")
+        check("480 分钟 -> 8h 00m", Format.timeText(480) == "8h 00m")
+        check("1440 分钟 -> 24h 00m", Format.timeText(1440) == "24h 00m")
+        check("0 分钟 -> --", Format.timeText(0) == "--")
+        check("负值 -> --", Format.timeText(-5) == "--")
+
         print("\nRESULT: \(pass) passed, \(fail) failed")
         exit(fail == 0 ? 0 : 1)
     }
