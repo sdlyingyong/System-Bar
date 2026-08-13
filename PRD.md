@@ -25,6 +25,7 @@
 | 实时功耗 | W | macmon 口径：CPU+GPU+ANE | IOReport（已验证） |
 | 上传/下载速度 | KB/s·MB/s | 活动网卡字节计数差值 | sysctl iflist2（已验证） |
 | 电池健康 | % + 循环次数 | 当前容量/设计容量、循环次数 | AppleSmartBattery IORegistry（已验证） |
+| 内存压力 | 三级 | 正常/警告/严重（🟢🟡🔴） | sysctl `kern.memorystatus_vm_pressure_level`（待验证） |
 | 磁盘读写/剩余 | KB/s·MB/s + GB | 磁盘字节计数差值 + 剩余空间 | IOBlockStorageDriver 统计 + statvfs（待验证） |
 
 ## 3. 非目标（明确不做）
@@ -75,7 +76,7 @@ C helper (smctemp)  常驻进程
   - `> 40°C`：特别提醒（高温）→ `🔥`
 - 下拉面板（NSStatusItem + NSPopover transient 实现，替代 MenuBarExtra——macOS 13 上 MenuBarExtra 状态栏项会消失/面板状态错乱）：
   - **关闭行为**：点击面板外任意处原生关闭；✕ 杀进程不关闭（可连续杀多个）；再次点击图标切换
-  - **指标开关组**：CPU 温度 / 电池温度 / CPU 占用 / 内存占用 / GPU 占用 / 实时功耗 / 上传下载 / 磁盘（Toggle，即时生效并持久化）
+  - **指标开关组**：CPU 温度 / 电池温度 / CPU 占用 / 内存占用 / GPU 占用 / 实时功耗 / 上传下载 / 磁盘 / 内存压力（Toggle，即时生效并持久化）
   - **电池健康行**：`电池健康 92% · 120 次循环`（数据可用时显示，无需开关）
   - **电池剩余时间行**：`电池剩余 1h 11m`（估算 = 当前容量 ÷ 放电电流，仅电池放电时有效；充电/插电显示 `--`）
   - 「退出」

@@ -475,6 +475,15 @@ static double disk_free(void) {
     return (double)s.f_bavail * s.f_frsize;
 }
 
+/* ---- memory pressure (1=正常 2=警告 4=严重) ---- */
+
+static double mem_pressure_level(void) {
+    int level = 0;
+    size_t len = sizeof(level);
+    if (sysctlbyname("kern.memorystatus_vm_pressure_level", &level, &len, NULL, 0) != 0) return -1;
+    return (double)level;
+}
+
 /* ---- sampling ---- */
 
 static void sample(void) {
@@ -503,6 +512,7 @@ static void sample(void) {
     double cycles = -1, health = -1;
     battery_health(&cycles, &health);
     double remain = battery_remain_minutes();
+    double mempres = mem_pressure_level();
 
     double dread = -1, dwrite = -1;
     disk_speeds(dt_sec, &dread, &dwrite);
@@ -524,6 +534,7 @@ static void sample(void) {
     EMIT("batcyc", cycles);
     EMIT("bathealth", health);
     EMIT("batremain", remain);
+    EMIT("mempres", mempres);
     EMIT("diskread", dread);
     EMIT("diskwrite", dwrite);
     EMIT("diskfree", dfree);

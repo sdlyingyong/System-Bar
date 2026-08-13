@@ -21,6 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             "show.cpuUsage": true, "show.memUsage": true,
             "show.gpuUsage": false, "show.power": true,
             "show.net": false, "show.disk": false,
+            "show.mempres": true,
         ])
 
         monitor = TempMonitor()
@@ -88,6 +89,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         if d.bool(forKey: "show.disk"), let r = monitor.diskRead, let w = monitor.diskWrite, let f = monitor.diskFree {
             seg(" R" + Format.pad(Format.speedText(r), 4) + " W" + Format.pad(Format.speedText(w), 4) + " " + Format.pad(Format.freeText(f), 3))
+        }
+        if d.bool(forKey: "show.mempres"), let p = monitor.memPressure {
+            seg(" " + Format.memPressureSymbol(p))
         }
         if out.length == 0 { seg("--") }
         statusItem.button?.attributedTitle = out

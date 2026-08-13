@@ -33,7 +33,7 @@ fi
 check "exit code 0 (got $RC)" "ok"
 
 # required metric keys present
-for k in cpu battery cpupct mempct gpupct power down up batcyc bathealth batremain diskread diskwrite diskfree; do
+for k in cpu battery cpupct mempct gpupct power down up batcyc bathealth batremain diskread diskwrite diskfree mempres; do
     check "has key $k" "$([[ "$OUT" == *";$k="* || "$OUT" == "$k="* ]] && echo ok || echo fail)"
 done
 
@@ -48,6 +48,10 @@ check "battery health in 0..100 (got $BH)" "$(is_num "$BH" && in_range "$BH" 0 1
 # battery remain: -1（充电/插电）或 0..2880 分钟
 BR=$(field batremain)
 check "battery remain 合理 (got $BR)" "$(is_num "$BR" && { [ "$BR" = "-1.0" ] || in_range "$BR" 0 2880; } && echo ok || echo fail)"
+
+# mempres: 1/2/4
+MP=$(field mempres)
+check "mempres 在 {1,2,4} (got $MP)" "$(is_num "$MP" && { [ "$MP" = "1.0" ] || [ "$MP" = "2.0" ] || [ "$MP" = "4.0" ]; } && echo ok || echo fail)"
 
 # disk keys plausible
 DF=$(field diskfree)
@@ -68,7 +72,7 @@ check "mem in 0..100 (got $MV)" "$(is_num "$MV" && in_range "$MV" 0 100 && echo 
 check "gpu in 0..100 (got $GV)" "$(is_num "$GV" && in_range "$GV" 0 100 && echo ok || echo fail)"
 
 # sensors list non-empty
-FIELDS=$(echo "$OUT" | tr ';' '\n' | grep '=' | grep -vE '^(cpu|battery|cpupct|mempct|gpupct|power|down|up|batcyc|bathealth|batremain|diskread|diskwrite|diskfree)=')
+FIELDS=$(echo "$OUT" | tr ';' '\n' | grep '=' | grep -vE '^(cpu|battery|cpupct|mempct|gpupct|power|down|up|batcyc|bathealth|batremain|diskread|diskwrite|diskfree|mempres)=')
 COUNT=$(echo "$FIELDS" | grep -c '=')
 check "at least 5 sensors reported (got $COUNT)" "$([ "$COUNT" -ge 5 ] && echo ok || echo fail)"
 

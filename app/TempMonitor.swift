@@ -13,6 +13,7 @@ final class TempMonitor: ObservableObject {
     @Published private(set) var batteryCycles: Double?
     @Published private(set) var batteryHealth: Double?
     @Published private(set) var batteryRemain: Double?
+    @Published private(set) var memPressure: Double?
     @Published private(set) var diskRead: Double?
     @Published private(set) var diskWrite: Double?
     @Published private(set) var diskFree: Double?
@@ -107,6 +108,7 @@ final class TempMonitor: ObservableObject {
         batteryCycles = take("batcyc")
         batteryHealth = take("bathealth")
         batteryRemain = values["batremain"]  // -1 表示充电/插电，保留以便显示 --
+        memPressure = take("mempres")
         diskRead = take("diskread")
         diskWrite = take("diskwrite")
         diskFree = take("diskfree")

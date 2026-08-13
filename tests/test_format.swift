@@ -57,6 +57,15 @@ struct FormatTests {
         check("0 分钟 -> --", Format.timeText(0) == "--")
         check("负值 -> --", Format.timeText(-5) == "--")
 
+        // 内存压力映射
+        check("压力 1 -> 🟢", Format.memPressureSymbol(1) == "🟢")
+        check("压力 2 -> 🟡", Format.memPressureSymbol(2) == "🟡")
+        check("压力 4 -> 🔴", Format.memPressureSymbol(4) == "🔴")
+        check("压力未知 -> ⚪", Format.memPressureSymbol(99) == "⚪")
+        check("文字 1 -> 正常", Format.memPressureText(1) == "正常")
+        check("文字 2 -> 警告", Format.memPressureText(2) == "警告")
+        check("文字 4 -> 严重", Format.memPressureText(4) == "严重")
+
         print("\nRESULT: \(pass) passed, \(fail) failed")
         exit(fail == 0 ? 0 : 1)
     }

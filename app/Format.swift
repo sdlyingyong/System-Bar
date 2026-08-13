@@ -42,4 +42,24 @@ enum Format {
         if m <= 0 { return "--" }
         return "\(m / 60)h \(String(format: "%02d", m % 60))m"
     }
+
+    /// 内存压力符号：1=🟢 2=🟡 4=🔴（同活动监视器绿黄红）
+    static func memPressureSymbol(_ level: Double) -> String {
+        switch Int(level) {
+        case 4: return "🔴"
+        case 2: return "🟡"
+        case 1: return "🟢"
+        default: return "⚪"
+        }
+    }
+
+    /// 内存压力文字
+    static func memPressureText(_ level: Double) -> String {
+        switch Int(level) {
+        case 4: return "严重"
+        case 2: return "警告"
+        case 1: return "正常"
+        default: return "未知"
+        }
+    }
 }

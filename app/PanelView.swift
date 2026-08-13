@@ -35,6 +35,7 @@ struct PanelView: View {
             Toggle("实时功耗", isOn: $showPower)
             Toggle("上传下载", isOn: $showNet)
             Toggle("磁盘", isOn: $showDisk)
+            Toggle("内存压力", isOn: $showMempres)
         }
         .toggleStyle(.checkbox)
     }
@@ -105,4 +106,5 @@ struct PanelView: View {
     @AppStorage("show.power") private var showPower = true
     @AppStorage("show.net") private var showNet = true
     @AppStorage("show.disk") private var showDisk = true
+    @AppStorage("show.mempres") private var showMempres = true
 }
