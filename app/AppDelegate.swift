@@ -15,11 +15,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
 
+
         UserDefaults.standard.register(defaults: [
             "show.cpuTemp": true, "show.batteryTemp": false,
             "show.cpuUsage": true, "show.memUsage": true,
             "show.gpuUsage": false, "show.power": true,
-            "show.net": true, "show.disk": true,
+            "show.net": false, "show.disk": false,
         ])
 
         monitor = TempMonitor()
@@ -59,22 +60,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func updateTitle() {
         let d = UserDefaults.standard
         let out = NSMutableAttributedString()
-
-        if let img = NSImage(systemSymbolName: "thermometer.medium", accessibilityDescription: nil) {
-            img.size = NSSize(width: 12, height: 12)
-            let att = NSTextAttachment()
-            att.image = img
-            att.bounds = CGRect(x: 0, y: -2, width: 12, height: 12)
-            out.append(NSAttributedString(attachment: att))
-        }
-
         let font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)
         func seg(_ s: String) {
             out.append(NSAttributedString(string: s, attributes: [.font: font]))
         }
 
         if d.bool(forKey: "show.cpuTemp"), let v = monitor.cpuTemp {
-            seg(" " + String(format: "%3d°", Int(v.rounded())))
+            seg(String(format: "%3d°", Int(v.rounded())))
         }
         if d.bool(forKey: "show.batteryTemp"), let v = monitor.batteryTemp {
             seg(" " + Format.batterySymbol(v) + "B" + String(format: "%3d°", Int(v.rounded())))

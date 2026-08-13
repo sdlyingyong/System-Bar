@@ -106,7 +106,7 @@ final class TempMonitor: ObservableObject {
         upSpeed = take("up")
         batteryCycles = take("batcyc")
         batteryHealth = take("bathealth")
-        batteryRemain = take("batremain")
+        batteryRemain = values["batremain"]  // -1 表示充电/插电，保留以便显示 --
         diskRead = take("diskread")
         diskWrite = take("diskwrite")
         diskFree = take("diskfree")

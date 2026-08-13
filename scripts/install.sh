@@ -8,7 +8,7 @@ DEST="/Applications/System-Bar.app"
 LA="$HOME/Library/LaunchAgents/com.system-bar.app.plist"
 
 echo "==> 1/4 构建..."
-"$ROOT/scripts/build.sh" >/dev/null
+"$ROOT/scripts/build.sh"
 
 echo "==> 2/4 停止正在运行的实例（含旧名 MenuTemp）..."
 pkill -f "System-Bar.app/Contents/MacOS/System-Bar" 2>/dev/null || true
