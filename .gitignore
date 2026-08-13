@@ -4,3 +4,4 @@ helper/smctemp
 *.o
 *.dSYM/
 release/
+helper/smc-probe
