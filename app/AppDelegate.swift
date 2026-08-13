@@ -76,7 +76,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             seg(" " + String(format: "%3d%%", Int(v.rounded())))
         }
         if d.bool(forKey: "show.memUsage"), let v = monitor.memUsage {
-            seg(" M" + String(format: "%3d%%", Int(v.rounded())))
+            var s = " M" + String(format: "%3d%%", Int(v.rounded()))
+            if d.bool(forKey: "show.mempres"), let p = monitor.memPressure {
+                s += Format.memPressureSymbol(p)
+            }
+            seg(s)
+        } else if d.bool(forKey: "show.mempres"), let p = monitor.memPressure {
+            seg(" " + Format.memPressureSymbol(p))
         }
         if d.bool(forKey: "show.gpuUsage"), let v = monitor.gpuUsage {
             seg(" G" + String(format: "%3d%%", Int(v.rounded())))
@@ -89,9 +95,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         if d.bool(forKey: "show.disk"), let r = monitor.diskRead, let w = monitor.diskWrite, let f = monitor.diskFree {
             seg(" R" + Format.pad(Format.speedText(r), 4) + " W" + Format.pad(Format.speedText(w), 4) + " " + Format.pad(Format.freeText(f), 3))
-        }
-        if d.bool(forKey: "show.mempres"), let p = monitor.memPressure {
-            seg(" " + Format.memPressureSymbol(p))
         }
         if out.length == 0 { seg("--") }
         statusItem.button?.attributedTitle = out
