@@ -19,24 +19,19 @@
 |---|---|---|---|
 | CPU 温度 | °C | P/E 核传感器最大值，回退 tdie | IOHID（已验证） |
 | 电池温度 | °C | `gas gauge battery` 传感器 | IOHID（已验证） |
-| CPU 占用 | % | 总体 CPU 使用率 | `host_processor_info`（待验证） |
-| 内存占用 | % | used / total 内存 | `host_statistics64`（待验证） |
+| CPU 占用 | % | 总体 CPU 使用率 | `host_processor_info`（已验证） |
+| 内存占用 | % | used / total 内存 | `host_statistics64`（已验证） |
 | GPU 占用 | % | GPU 利用率 | AGXAccelerator（已验证） |
 | 实时功耗 | W | macmon 口径：CPU+GPU+ANE | IOReport（已验证） |
 | 上传/下载速度 | KB/s·MB/s | 活动网卡字节计数差值 | sysctl iflist2（已验证） |
 | 电池健康 | % + 循环次数 | 当前容量/设计容量、循环次数 | AppleSmartBattery IORegistry（已验证） |
-| 内存压力 | 三级 | 正常/警告/严重（🟢🟡🔴） | sysctl `kern.memorystatus_vm_pressure_level`（待验证） |
-| 磁盘读写/剩余 | KB/s·MB/s + GB | 磁盘字节计数差值 + 剩余空间 | IOBlockStorageDriver 统计 + statvfs（待验证） |
+| 电池剩余时间 | 时:分 | 当前容量 ÷ 放电电流（放电时有效，插电 `--`） | AppleSmartBattery IORegistry（已验证） |
+| 内存压力 | 三级 | 正常/警告/严重（🟢🟡🔴） | sysctl `kern.memorystatus_vm_pressure_level`（已验证） |
+| 磁盘读写/剩余 | KB/s·MB/s + GB | 磁盘字节计数差值 + 剩余空间 | IOBlockStorageDriver 统计 + statvfs（已验证） |
 
 ## 3. 非目标（明确不做）
 
 - 不做历史曲线/图表
-- 不监控磁盘/网络吞吐
-- 不做复杂配置界面
-- 不支持 Intel Mac
-
-- 不做历史曲线/图表
-- 不监控内存、磁盘、网络等其他指标
 - 不做复杂配置界面
 - 不支持 Intel Mac（如后续需要可降级为 `osx-cpu-temp` 读取）
 
@@ -44,7 +39,7 @@
 
 | 项 | 选择 | 说明 |
 |---|---|---|
-| 系统要求 | macOS 13+ | 使用原生 `MenuBarExtra`（macOS 13 引入） |
+| 系统要求 | macOS 13+ | 使用原生 AppKit `NSStatusItem` + `NSPopover`（曾用 `MenuBarExtra`，因 macOS 13 状态栏项消失/面板状态错乱弃用） |
 | 芯片 | Apple Silicon 专用 | M1 实测；其他 M 系列待验证 |
 | 温度来源 | HID SMC 事件接口 | `AppleARMPMUTempSensor` 节点，免 root |
 | CPU 温度定义 | `max(pACC ∪ eACC)`，回退 `tdie` | P 核/E 核传感器最大值 |
@@ -54,14 +49,15 @@
 ### 架构图
 
 ```
-SwiftUI MenuBarExtra App（菜单栏 "74° 25% 62% 4.2W"，下拉含开关）
+NSStatusItem + NSPopover App（菜单栏 "74° 25% M75% 6.1W ↓12K ↑955B"，下拉含开关/进程）
         │  NSPipe 读取 stdout，按行解析
         ▼
 C helper (smctemp)  常驻进程
   ├─ IOHID 温度读取（事件驱动）
   ├─ host_processor_info  CPU 占用
   ├─ host_statistics64    内存占用
-  ├─ GPU 占用 / 功耗      见 §9
+  ├─ AGXAccelerator       GPU 占用
+  ├─ IOReport             实时功耗
   └─ 每 2s 输出一行 "key=value;..."
 ```
 
@@ -81,12 +77,13 @@ C helper (smctemp)  常驻进程
   - **电池剩余时间行**：`电池剩余 1h 11m`（估算 = 当前容量 ÷ 放电电流，仅电池放电时有效；充电/插电显示 `--`）
   - 「退出」
 - 无 Dock 图标（`LSUIElement`）
-- **防跳动**：数字显示采用固定宽度 + 等宽数字（温度/百分比 3 位、功耗 5 字符、网速 4 字符右对齐），数值位数变化时菜单栏布局不变
+- **防跳动**：每段使用**定宽右对齐 + 等宽数字**，单段字符数不随数值位数变化（温度/百分比 3 位、功耗 6 字符含 W、网速/磁盘 4 字符右对齐）。功耗用 `Format.powerText` 统一右对齐到 6 字符；网速 `speedText` 保证 ≤4 字符（1000–1023 B 进位为 `1.0K`，不产生 5 字符）。数值位数变化时菜单栏布局不变
 - **每日最高温度记录**：按天记录 CPU/电池最高温度到 `~/Library/Application Support/System-Bar/daily-temps.log`（每行 `2026-08-12 cpu=89.2 bat=44.1`），菜单显示今日最高，长期监控老化趋势
 - **进程管理**：下拉菜单按内存占用列出**前 7 个**进程（名称 / **内存占总量百分比**，不显示其他指标），行首 `✕` 标识，整行可点击一键强制结束
   - **系统进程（root 属主）需连点两次 `✕` 确认**，普通用户进程一次即杀；杀失败显示提示
   - 数据源：libproc（`proc_listallpids` / `proc_pidinfo`），5s 刷新
   - 安全：排除自身与 helper；仅限同用户进程（系统进程无权限自然失败并提示）
+- **内存压力并入内存占用**：内存占用开启且内存压力开启时，显示为 `M75%🟢`（圆点并入）；内存占用关闭但内存压力开启时，单独显示 `🟢`；两者都关则不显示（F8）
 - 注：不展示原始温度传感器列表（名称晦涩无实用价值）
 
 ### 5.1 提醒阈值依据
@@ -110,9 +107,9 @@ C helper (smctemp)  常驻进程
 
 1. **helper 单元测试**：反复运行，断言输出格式合法、各指标在合理区间、无崩溃
 2. **阈值逻辑测试**：电池温度分级边界值（40°C）断言
-3. **格式化测试**：`Format.swift` 的 pad/speedText 边界值 + 定宽断言
+3. **格式化测试**：`Format.swift` 的 pad/speedText/powerText/freeText/timeText 边界值 + 等宽断言（含功耗 6 字符定宽、网速 ≤4 字符跳宽防护）
 4. **集成测试**：App 启动后收到 helper 全量数据，开关切换即时反映
-5. **手动验收**：菜单栏文字、开关、提醒符号、防跳动、退出
+5. **手动验收**：菜单栏文字、开关、提醒符号、防跳动（数值位数变化布局不变）、退出
 
 ## 8. 里程碑
 
@@ -122,8 +119,20 @@ C helper (smctemp)  常驻进程
 4. ✅ helper 扩展输出多指标并跑通测试（已完成）
 5. ✅ App 菜单栏多指标 + 开关配置 + 打包验证（已完成）
 6. ✅ F1 电池健康 / F2 磁盘读写+剩余空间（已完成）
-7. F3 GitHub Actions CI + main 分支保护（进行中）
-8. F4 每日最高温度记录（老化趋势）
+7. ✅ F3 GitHub Actions CI + main 分支保护（已完成：ci.yml 含 build + format + dailylog + procmon + smctemp(arm)）
+8. ✅ F4 每日最高温度记录（老化趋势，已完成）
+9. ✅ F5 进程管理：前 7 个按内存列出 + 整行按钮 + 系统进程两次确认（已完成）
+10. ✅ F6 下拉面板交互：NSStatusItem+NSPopover、面板外点击关闭、✕ 不关面板可连杀（已完成）
+11. ✅ F7 电池剩余时间估算（容量÷放电电流，插电显示 `--`）（已完成）
+12. ✅ F8 内存压力三级显示，并入内存占用段（`M75%🟢`）（已完成，含防跳动对齐优化）
+
+> 说明：F5–F8 的代码均已落地并配套测试；本文档已在新版中追平（指标表、交互、防跳动口径）。
+
+### Todo / 后续候选（超出当前 PRD 范围，供产品规划参考）
+- 电池健康趋势报告（基于 daily-temps.log 的长期老化汇总）
+- 指标语义化输出（把裸数字转成"健康结论"）
+- 下拉面板分组/折叠，避免开关过多溢出
+- 更多机型（M2–M5）实测与传感器命名回退覆盖
 
 ## 9. 工程化（CI）
 

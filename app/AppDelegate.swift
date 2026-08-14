@@ -88,7 +88,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             seg(" G" + String(format: "%3d%%", Int(v.rounded())))
         }
         if d.bool(forKey: "show.power"), let v = monitor.power {
-            seg(" " + String(format: "%5.1fW", v))
+            seg(" " + Format.powerText(v))
         }
         if d.bool(forKey: "show.net"), let down = monitor.downSpeed, let up = monitor.upSpeed {
             seg(" ↓" + Format.pad(Format.speedText(down), 4) + " ↑" + Format.pad(Format.speedText(up), 4))

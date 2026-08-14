@@ -49,6 +49,26 @@ struct FormatTests {
         check("800MB -> 800M", Format.freeText(800 * 1048576) == "800M")
         check("freeText <= 4 chars", Format.freeText(99 * 1099511627776).count <= 4)
 
+        // powerText 定宽：小数/整数位变化时单段字符数恒定
+        check("power 9.9W -> '  9.9W'", Format.powerText(9.9) == "  9.9W")
+        check("power 52.7W -> ' 52.7W'", Format.powerText(52.7) == " 52.7W")
+        check("power 150.0W -> '150.0W'", Format.powerText(150.0) == "150.0W")
+        check("power 0.0W -> '  0.0W'", Format.powerText(0.0) == "  0.0W")
+        check("power 9.9 与 150.0 等宽", Format.powerText(9.9).count == Format.powerText(150.0).count)
+        check("power 负值/无效 -> '    --W'", Format.powerText(-1) == "    --W")
+
+        // speedText 宽度加固：1000–1023 B 不再产出 5 字符 "1023B" 导致跳宽
+        check("999 B/s -> 999B", Format.speedText(999) == "999B")
+        check("1000 B/s -> 1.0K", Format.speedText(1000) == "1.0K")
+        check("1023 B/s -> 1.0K", Format.speedText(1023) == "1.0K")
+        check("speedText(1023) <= 4 chars", Format.speedText(1023).count <= 4)
+
+        // 整数位右侧对齐稳定性（配合等宽数字整段不跳）
+        let segTemp2 = [String(format: "%3d°", 74), String(format: "%3d°", 100)]
+        let segPct2 = [String(format: "%3d%%", 25), String(format: "%3d%%", 100)]
+        check("temp 100 与 74 段等宽", segTemp2[0].count == segTemp2[1].count)
+        check("pct 100 与 25 段等宽", segPct2[0].count == segPct2[1].count)
+
         // timeText 边界
         check("71 分钟 -> 1h 11m", Format.timeText(71) == "1h 11m")
         check("61 分钟 -> 1h 01m", Format.timeText(61) == "1h 01m")
