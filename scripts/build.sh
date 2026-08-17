@@ -13,7 +13,7 @@ clang -O2 -Wall -framework CoreFoundation -framework IOKit -lIOReport \
 
 echo "[2/4] compiling System-Bar app..."
 swiftc -O \
-    "$ROOT/app/AppDelegate.swift" "$ROOT/app/main.swift" "$ROOT/app/PanelView.swift" "$ROOT/app/TempMonitor.swift" "$ROOT/app/Format.swift" "$ROOT/app/DailyLog.swift" "$ROOT/app/ProcMonitor.swift" \
+    "$ROOT/app/AppDelegate.swift" "$ROOT/app/main.swift" "$ROOT/app/PanelView.swift" "$ROOT/app/TempMonitor.swift" "$ROOT/app/Format.swift" "$ROOT/app/DailyLog.swift" "$ROOT/app/ProcMonitor.swift" "$ROOT/app/Cleaner.swift" \
     -o "$OUT/System-Bar" -framework SwiftUI -framework AppKit
 
 echo "[3/4] assembling bundle..."

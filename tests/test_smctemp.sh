@@ -33,7 +33,7 @@ fi
 check "exit code 0 (got $RC)" "ok"
 
 # required metric keys present
-for k in cpu battery cpupct mempct gpupct power down up batcyc bathealth batremain diskread diskwrite diskfree mempres; do
+for k in cpu battery cpupct mempct gpupct power down up batcyc bathealth batremain diskread diskwrite diskfree disktotal mempres; do
     check "has key $k" "$([[ "$OUT" == *";$k="* || "$OUT" == "$k="* ]] && echo ok || echo fail)"
 done
 
@@ -56,6 +56,9 @@ check "mempres 在 {1,2,4} (got $MP)" "$(is_num "$MP" && { [ "$MP" = "1.0" ] || 
 # disk keys plausible
 DF=$(field diskfree)
 check "disk free in 1GB..8TB (got $DF)" "$(is_num "$DF" && in_range "$DF" 1073741824 8796093022208 && echo ok || echo fail)"
+DT=$(field disktotal)
+check "disk total in 16GB..64TB (got $DT)" "$(is_num "$DT" && in_range "$DT" 17179869184 70368744177664 && echo ok || echo fail)"
+check "disk free <= total" "$(awk -v f="$DF" -v t="$DT" 'BEGIN { exit !(f>0 && f<=t) }' && echo ok || echo fail)"
 
 # CPU temp in plausible band (15-125)
 CV=$(field cpu)
@@ -72,7 +75,7 @@ check "mem in 0..100 (got $MV)" "$(is_num "$MV" && in_range "$MV" 0 100 && echo 
 check "gpu in 0..100 (got $GV)" "$(is_num "$GV" && in_range "$GV" 0 100 && echo ok || echo fail)"
 
 # sensors list non-empty
-FIELDS=$(echo "$OUT" | tr ';' '\n' | grep '=' | grep -vE '^(cpu|battery|cpupct|mempct|gpupct|power|down|up|batcyc|bathealth|batremain|diskread|diskwrite|diskfree|mempres)=')
+FIELDS=$(echo "$OUT" | tr ';' '\n' | grep '=' | grep -vE '^(cpu|battery|cpupct|mempct|gpupct|power|down|up|batcyc|bathealth|batremain|diskread|diskwrite|diskfree|disktotal|mempres)=')
 COUNT=$(echo "$FIELDS" | grep -c '=')
 check "at least 5 sensors reported (got $COUNT)" "$([ "$COUNT" -ge 5 ] && echo ok || echo fail)"
 

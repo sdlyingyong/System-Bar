@@ -69,6 +69,22 @@ struct FormatTests {
         check("temp 100 与 74 段等宽", segTemp2[0].count == segTemp2[1].count)
         check("pct 100 与 25 段等宽", segPct2[0].count == segPct2[1].count)
 
+        // speedMB 始终以 MB/s 显示
+        check("0B/s -> 0.0M", Format.speedMB(0) == "0.0M")
+        check("1KB/s -> 0.0M", Format.speedMB(1024) == "0.0M")
+        check("1.5MB/s -> 1.5M", Format.speedMB(1.5 * 1048576) == "1.5M")
+        check("12MB/s -> 12.0M", Format.speedMB(12 * 1048576) == "12.0M")
+        check("100MB/s -> 100M", Format.speedMB(100 * 1048576) == "100M")
+        check("1GB/s -> 1024M", Format.speedMB(1073741824) == "1024M")
+
+        // freePct 边界
+        check("8G/100G -> 8%", Format.freePct(8 * 1073741824, total: 100 * 1073741824) == "8%")
+        check("19.1G/251G -> 8%", Format.freePct(19.06 * 1073741824, total: 251 * 1073741824) == "8%")
+        check("0/100G -> 0%", Format.freePct(0, total: 100 * 1073741824) == "0%")
+        check("100/100 -> 100%", Format.freePct(100, total: 100) == "100%")
+        check("总量无效 -> --", Format.freePct(100, total: 0) == "--")
+        check("负剩余 -> --", Format.freePct(-1, total: 100) == "--")
+
         // timeText 边界
         check("71 分钟 -> 1h 11m", Format.timeText(71) == "1h 11m")
         check("61 分钟 -> 1h 01m", Format.timeText(61) == "1h 01m")

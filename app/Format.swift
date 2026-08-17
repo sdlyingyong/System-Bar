@@ -7,6 +7,13 @@ enum Format {
         s.count >= n ? s : String(repeating: " ", count: n - s.count) + s
     }
 
+    /// B/s → 始终以 MB/s 显示（如 "1.2M"、"0.0M"、"12.0M"），定宽 5 字符
+    static func speedMB(_ bps: Double) -> String {
+        let mb = bps / 1048576
+        if mb >= 100 { return "\(Int(mb.rounded()))M" }
+        return String(format: "%.1fM", mb)
+    }
+
     /// B/s → 紧凑显示（B / K / M / G，**最多 4 字符**，右对齐定宽友好）。
     ///
     /// 边界保证：B 段在 1000–1023 时不再产出 "1000B" 这类 5 字符，而是进位为
@@ -46,6 +53,12 @@ enum Format {
         }
         if bytes >= 1073741824 { return "\(Int((bytes / 1073741824).rounded()))G" }
         return "\(Int((bytes / 1048576).rounded()))M"
+    }
+
+    /// 剩余空间百分比（如 "8%" / "100%"；总量无效时 "--"）
+    static func freePct(_ free: Double, total: Double) -> String {
+        guard total > 0, free >= 0 else { return "--" }
+        return "\(Int((free / total * 100).rounded()))%"
     }
 
     /// 电池温度提醒符号：≤40 无 / >40 🔥

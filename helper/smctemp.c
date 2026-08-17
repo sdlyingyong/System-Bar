@@ -469,10 +469,12 @@ static int disk_speeds(double dt_sec, double *rd, double *wr) {
     return 0;
 }
 
-static double disk_free(void) {
+/* 剩余空间(字节)与总容量(字节)；失败时两值均为 -1。 */
+static void disk_space(double *free_bytes, double *total_bytes) {
     struct statvfs s;
-    if (statvfs("/", &s) != 0) return -1;
-    return (double)s.f_bavail * s.f_frsize;
+    if (statvfs("/", &s) != 0) { *free_bytes = -1; *total_bytes = -1; return; }
+    *free_bytes = (double)s.f_bavail * s.f_frsize;
+    *total_bytes = (double)s.f_blocks * s.f_frsize;
 }
 
 /* ---- memory pressure (1=正常 2=警告 4=严重) ---- */
@@ -516,7 +518,8 @@ static void sample(void) {
 
     double dread = -1, dwrite = -1;
     disk_speeds(dt_sec, &dread, &dwrite);
-    double dfree = disk_free();
+    double dfree = -1, dtotal = -1;
+    disk_space(&dfree, &dtotal);
 
 #define EMIT(key, val) do { \
         int m = snprintf(buf + off, sizeof(buf) - off, "%s%s=%.1f", off ? ";" : "", key, val); \
@@ -538,6 +541,7 @@ static void sample(void) {
     EMIT("diskread", dread);
     EMIT("diskwrite", dwrite);
     EMIT("diskfree", dfree);
+    EMIT("disktotal", dtotal);
 
     for (int i = 0; i < nsensors; i++) {
         double v = read_temp(sensors[i].service);

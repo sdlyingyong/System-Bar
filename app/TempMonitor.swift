@@ -17,6 +17,7 @@ final class TempMonitor: ObservableObject {
     @Published private(set) var diskRead: Double?
     @Published private(set) var diskWrite: Double?
     @Published private(set) var diskFree: Double?
+    @Published private(set) var diskTotal: Double?
 
     private var process: Process?
     private var buffer = Data()
@@ -112,6 +113,7 @@ final class TempMonitor: ObservableObject {
         diskRead = take("diskread")
         diskWrite = take("diskwrite")
         diskFree = take("diskfree")
+        diskTotal = take("disktotal")
         dailyLog?.observe(cpu: cpuTemp, battery: batteryTemp)
     }
 

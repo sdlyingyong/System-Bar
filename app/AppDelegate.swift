@@ -91,10 +91,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             seg(" " + Format.powerText(v))
         }
         if d.bool(forKey: "show.net"), let down = monitor.downSpeed, let up = monitor.upSpeed {
-            seg(" ↓" + Format.pad(Format.speedText(down), 4) + " ↑" + Format.pad(Format.speedText(up), 4))
+            seg(" ↓" + Format.pad(Format.speedMB(down), 4) + " ↑" + Format.pad(Format.speedMB(up), 4))
         }
-        if d.bool(forKey: "show.disk"), let r = monitor.diskRead, let w = monitor.diskWrite, let f = monitor.diskFree {
-            seg(" R" + Format.pad(Format.speedText(r), 4) + " W" + Format.pad(Format.speedText(w), 4) + " " + Format.pad(Format.freeText(f), 3))
+        if d.bool(forKey: "show.disk"), let r = monitor.diskRead, let w = monitor.diskWrite {
+            seg(" R" + Format.pad(Format.speedText(r), 4) + " W" + Format.pad(Format.speedText(w), 4))
         }
         if out.length == 0 { seg("--") }
         statusItem.button?.attributedTitle = out

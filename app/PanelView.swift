@@ -11,9 +11,11 @@ struct PanelView: View {
         VStack(alignment: .leading, spacing: 4) {
             togglesSection
             Divider()
-            batterySection
+            detailsSection
             Divider()
             processSection
+            Divider()
+            cleanupSection
             Divider()
             Button("退出 System-Bar") {
                 monitor.stop()
@@ -23,6 +25,7 @@ struct PanelView: View {
         }
         .padding(10)
         .frame(width: 330)
+        .onAppear { refreshCleanupSize() }
     }
 
     private var togglesSection: some View {
@@ -31,16 +34,16 @@ struct PanelView: View {
             Toggle("电池温度", isOn: $showBatteryTemp)
             Toggle("CPU 占用", isOn: $showCpuUsage)
             Toggle("内存占用", isOn: $showMemUsage)
+            Toggle("内存压力", isOn: $showMempres)
             Toggle("GPU 占用", isOn: $showGpuUsage)
             Toggle("实时功耗", isOn: $showPower)
             Toggle("上传下载", isOn: $showNet)
             Toggle("磁盘", isOn: $showDisk)
-            Toggle("内存压力", isOn: $showMempres)
         }
         .toggleStyle(.checkbox)
     }
 
-    private var batterySection: some View {
+    private var detailsSection: some View {
         Group {
             if let health = monitor.batteryHealth {
                 Text("电池健康 \(Int(health.rounded()))% · \(monitor.batteryCycles.map { "\(Int($0.rounded())) 次循环" } ?? "")")
@@ -53,6 +56,15 @@ struct PanelView: View {
             }
             if monitor.todayCpu != nil || monitor.todayBattery != nil {
                 Text("今日最高 CPU \(monitor.todayCpu.map { "\(Int($0.rounded()))°" } ?? "--") / 电池 \(monitor.todayBattery.map { "\(Int($0.rounded()))°" } ?? "--")")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+            if let f = monitor.diskFree, let t = monitor.diskTotal {
+                Text("磁盘剩余 \(Format.freePct(f, total: t)) · \(Format.freeText(f)) / \(Format.freeText(t))")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            } else if let f = monitor.diskFree {
+                Text("磁盘剩余 \(Format.freeText(f))")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
@@ -107,4 +119,51 @@ struct PanelView: View {
     @AppStorage("show.net") private var showNet = true
     @AppStorage("show.disk") private var showDisk = true
     @AppStorage("show.mempres") private var showMempres = true
+
+    @State private var cleanupArmed = false
+    @State private var reclaimable: Int64 = 0
+    @State private var cleanupMessage: String?
+
+    private var cleanupSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("磁盘清理（废纸篓 + 缓存）")
+                .font(.headline)
+            HStack(spacing: 8) {
+                Button(cleanupArmed ? "再次点击确认清理" : "触发清理") {
+                    if cleanupArmed {
+                        performCleanup()
+                    } else {
+                        refreshCleanupSize()
+                        cleanupArmed = true
+                        cleanupMessage = "再次点击确认。将清空废纸篓并清除用户缓存，可回收 \(Format.freeText(Double(reclaimable)))。"
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(cleanupArmed ? .red : .accentColor)
+                if cleanupArmed {
+                    Button("取消") {
+                        cleanupArmed = false
+                        cleanupMessage = nil
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+            if let msg = cleanupMessage {
+                Text(msg)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func refreshCleanupSize() {
+        reclaimable = Cleaner.reclaimableBytes()
+    }
+
+    private func performCleanup() {
+        cleanupArmed = false
+        let freed = Cleaner.run()
+        refreshCleanupSize()
+        cleanupMessage = "已清理，本次释放 \(Format.freeText(Double(freed)))。"
+    }
 }
