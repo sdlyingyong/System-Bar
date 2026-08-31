@@ -29,6 +29,9 @@ jobs:
       - name: ProcMonitor tests (all platforms)
         run: ./tests/test_procmon.sh
 
+      - name: Popover dismiss policy tests (all platforms)
+        run: ./tests/test_popover.sh
+
 
       - name: Helper tests (Apple Silicon only)
         if: runner.arch == 'ARM64'

@@ -47,8 +47,11 @@ rm -rf /Applications/System-Bar.app
 ## 测试
 
 ```bash
-./tests/test_smctemp.sh     # helper 输出格式/取值范围/稳定性（18 项）
-./tests/test_format.sh      # 菜单栏格式化：定宽/边界值（22 项）
+./tests/test_smctemp.sh     # helper 输出格式/取值范围/稳定性
+./tests/test_format.sh      # 菜单栏格式化：定宽/边界值
+./tests/test_popover.sh     # 面板关闭判定：点击位置 / Esc / 坐标翻转
+./tests/test_dailylog.sh    # 每日最高温度记录
+./tests/test_procmon.sh     # 进程扫描与强杀
 ```
 
 ## 架构
@@ -63,9 +66,14 @@ System-Bar.app
 - helper 异常退出自动重启；指标读取均为低频采样，空闲时 helper 几乎零 CPU
 
 ```
-app/  System-BarApp.swift   菜单栏 UI + 开关配置（UserDefaults）
+app/  AppDelegate.swift   NSStatusItem + NSPopover（菜单栏 UI 生命周期）
+      PanelView.swift     面板：指标开关 / 电池 / 磁盘 / 进程 / 清理 / 退出
       TempMonitor.swift   helper 进程管理 + 输出解析
+      ProcMonitor.swift   进程扫描与强杀（libproc）
+      PopoverPolicy.swift 面板关闭判定（纯计算，可单测）
       Format.swift        定宽/格式化（可单测）
+      DailyLog.swift      每日最高温度记录
+      Cleaner.swift       废纸篓 + 用户缓存清理
 helper/smctemp.c          全部指标读取（单文件 C）
 scripts/                  build.sh / install.sh / make-icon.sh
 tests/                    测试脚本
@@ -101,6 +109,8 @@ icons/gen_icon.swift      应用图标生成器
 - 首次采样后（≤2s）CPU 占用 / 功耗 / 网速才有有效值（预热）
 - 电池温度提醒使用符号（`🔥`），菜单栏文字颜色在部分版本不生效
 - 功耗为 SoC 口径（CPU+GPU+ANE），不含屏幕与外设
+- 打开面板时会短暂激活 App：macOS 15 起 accessory App 的面板不再自动激活，
+  若不显式激活则"点击外部关闭"失效（详见 PRD F9）
 
 ## License
 

@@ -11,6 +11,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var monitor: TempMonitor!
     private var procMonitor: ProcMonitor!
     private var cancellables = Set<AnyCancellable>()
+    private var localMonitor: Any?
+    private var globalMonitor: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -46,16 +48,85 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ) { [weak self] _ in
             self?.updateTitle()
         }
+        // 兜底：切到别处（App 失活）时收起面板
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didResignActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            if self?.popover.isShown == true { self?.closePopover() }
+        }
         updateTitle()
     }
 
     @objc private func togglePopover() {
         guard let button = statusItem.button else { return }
-        if popover.isShown {
-            popover.performClose(nil)
-        } else {
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        if popover.isShown { closePopover() } else { showPopover(from: button) }
+    }
+
+    /// macOS 15 起 accessory App 的 popover 不会自动激活 App，`.transient` 的
+    /// "点击外部自动关闭"（依赖 App 由 active 变 inactive）因此永不触发。
+    /// 这里显式激活 + 让面板窗口成为 key，恢复原生关闭链路；再由
+    /// `installDismissMonitors()` 做事件兜底，防止系统行为再次变化。
+    private func showPopover(from button: NSStatusBarButton) {
+        NSApp.activate(ignoringOtherApps: true)
+        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        popover.contentViewController?.view.window?.makeKey()
+        installDismissMonitors()
+    }
+
+    private func closePopover() {
+        removeDismissMonitors()
+        popover.performClose(nil)
+    }
+
+    private func installDismissMonitors() {
+        guard localMonitor == nil, globalMonitor == nil else { return }
+        localMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown, .keyDown]
+        ) { [weak self] event in
+            self?.handle(event)
+            return event
         }
+        globalMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]
+        ) { [weak self] event in
+            self?.handle(event)
+        }
+    }
+
+    private func removeDismissMonitors() {
+        if let m = localMonitor { NSEvent.removeMonitor(m); localMonitor = nil }
+        if let m = globalMonitor { NSEvent.removeMonitor(m); globalMonitor = nil }
+    }
+
+    private func handle(_ event: NSEvent) {
+        guard popover.isShown else { return }
+        if event.type == .keyDown {
+            if PopoverPolicy.shouldCloseOnKey(isShown: true, keyCode: event.keyCode) {
+                closePopover()
+            }
+            return
+        }
+        if PopoverPolicy.shouldCloseOnClick(
+            isShown: true,
+            point: screenPoint(of: event),
+            popoverFrame: popover.contentViewController?.view.window?.frame,
+            statusFrame: statusItem.button?.window?.frame
+        ) {
+            closePopover()
+        }
+    }
+
+    /// 事件的屏幕坐标（AppKit 坐标系，左下原点）；无法取得时返回 nil（由策略保守关闭）。
+    private func screenPoint(of event: NSEvent) -> CGPoint? {
+        if let cg = event.cgEvent {
+            let q = cg.location
+            let viewport = PopoverPolicy.unionFrame(NSScreen.screens.map(\.frame))
+            return CGPoint(x: q.x, y: PopoverPolicy.flipY(q.y, union: viewport))
+        }
+        if let window = event.window {
+            return window.convertToScreen(CGRect(origin: event.locationInWindow, size: .zero)).origin
+        }
+        return nil
     }
 
     private func updateTitle() {
@@ -101,6 +172,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        removeDismissMonitors()
         monitor?.stop()
     }
 }
