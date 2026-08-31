@@ -61,6 +61,22 @@ enum Format {
         return "\(Int((free / total * 100).rounded()))%"
     }
 
+    /// 日期 → 时钟数字行（如 "08/19 周三 14:23:45"），星期用中文。
+    static func clockText(_ date: Date) -> String {
+        let cal = Calendar.current
+        let y = cal.component(.year, from: date)
+        let mo = cal.component(.month, from: date)
+        let d = cal.component(.day, from: date)
+        let h = cal.component(.hour, from: date)
+        let m = cal.component(.minute, from: date)
+        let s = cal.component(.second, from: date)
+        let wd = cal.component(.weekday, from: date) // 1=周日
+        let names = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"]
+        let w = (1...7).contains(wd) ? names[wd - 1] : ""
+        return String(format: "%04d/%02d/%02d %@ %02d:%02d:%02d",
+                      y, mo, d, w, h, m, s)
+    }
+
     /// 电池温度提醒符号：≤40 无 / >40 🔥
     static func batterySymbol(_ t: Double) -> String {
         t > 40 ? "🔥" : ""

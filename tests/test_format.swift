@@ -85,6 +85,12 @@ struct FormatTests {
         check("总量无效 -> --", Format.freePct(100, total: 0) == "--")
         check("负剩余 -> --", Format.freePct(-1, total: 100) == "--")
 
+        // clockText 边界（固定日期断言格式与星期）
+        let fixed = Calendar.current.date(from: DateComponents(year: 2026, month: 8, day: 19, hour: 14, minute: 23, second: 45))!
+        check("clockText 格式", Format.clockText(fixed) == "2026/08/19 周三 14:23:45")
+        let sun = Calendar.current.date(from: DateComponents(year: 2026, month: 8, day: 23, hour: 0, minute: 0, second: 0))!
+        check("clockText 周日", Format.clockText(sun) == "2026/08/23 周日 00:00:00")
+
         // timeText 边界
         check("71 分钟 -> 1h 11m", Format.timeText(71) == "1h 11m")
         check("61 分钟 -> 1h 01m", Format.timeText(61) == "1h 01m")

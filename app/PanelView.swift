@@ -59,6 +59,11 @@ struct PanelView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
+            if let v = monitor.gpuUsage {
+                Text("GPU 占用 \(Int(v.rounded()))%（整体）")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
             if let f = monitor.diskFree, let t = monitor.diskTotal {
                 Text("磁盘剩余 \(Format.freePct(f, total: t)) · \(Format.freeText(f)) / \(Format.freeText(t))")
                     .font(.callout)

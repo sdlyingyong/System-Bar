@@ -18,7 +18,7 @@ check() {
     fi
 }
 
-is_num() { [[ "$1" =~ ^[0-9]+([.][0-9]+)?$ ]]; }
+is_num() { [[ "$1" =~ ^-?[0-9]+([.][0-9]+)?$ ]]; }
 in_range() { awk -v v="$1" -v lo="$2" -v hi="$3" 'BEGIN { exit !(v>=lo && v<=hi) }'; }
 
 OUT="$("$HELPER" --once 2>/dev/null)"
