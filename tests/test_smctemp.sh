@@ -3,7 +3,15 @@
 # Verifies output format, plausible ranges, and stability across runs.
 set -u
 
-HELPER="${1:-$(dirname "$0")/../helper/smctemp}"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# helper 二进制不进 git（见 .gitignore），优先用 build.sh 的产物，其次才是源码目录里的副本
+if [ $# -ge 1 ]; then
+    HELPER="$1"
+elif [ -x "$ROOT/build/smctemp" ]; then
+    HELPER="$ROOT/build/smctemp"
+else
+    HELPER="$ROOT/helper/smctemp"
+fi
 PASS=0
 FAIL=0
 

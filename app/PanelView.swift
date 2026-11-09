@@ -125,34 +125,69 @@ struct PanelView: View {
     @AppStorage("show.disk") private var showDisk = true
     @AppStorage("show.mempres") private var showMempres = true
 
-    @State private var cleanupArmed = false
+    @State private var diskArmed = false
+    @State private var memArmed = false
     @State private var reclaimable: Int64 = 0
+    @State private var memCandidates: [MemoryCleaner.Candidate] = []
     @State private var cleanupMessage: String?
 
     private var cleanupSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("磁盘清理（废纸篓 + 缓存）")
+        VStack(alignment: .leading, spacing: 6) {
+            Text("清理")
                 .font(.headline)
-            HStack(spacing: 8) {
-                Button(cleanupArmed ? "再次点击确认清理" : "触发清理") {
-                    if cleanupArmed {
-                        performCleanup()
-                    } else {
-                        refreshCleanupSize()
-                        cleanupArmed = true
-                        cleanupMessage = "再次点击确认。将清空废纸篓并清除用户缓存，可回收 \(Format.freeText(Double(reclaimable)))。"
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(cleanupArmed ? .red : .accentColor)
-                if cleanupArmed {
-                    Button("取消") {
-                        cleanupArmed = false
-                        cleanupMessage = nil
-                    }
+
+            // —— 磁盘 ——
+            HStack(spacing: 6) {
+                Image(systemName: "internaldrive")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                Text("磁盘")
+                Spacer()
+                Text(Format.freeText(Double(reclaimable)))
+                    .font(.caption)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                Button(diskArmed ? "确认清理" : "清理") { toggleDisk() }
                     .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .tint(diskArmed ? .red : .accentColor)
+            }
+
+            // —— 内存 ——
+            HStack(spacing: 6) {
+                Image(systemName: "memorychip")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                Text("内存")
+                Spacer()
+                Button(memArmed ? "确认释放" : "检查") { toggleMemory() }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .tint(memArmed ? .red : .accentColor)
+            }
+
+            if !memCandidates.isEmpty {
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(memCandidates) { c in
+                        HStack(spacing: 6) {
+                            Text(c.name)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                            Spacer()
+                            if c.growthMB >= 1 {
+                                Text("+\(Int(c.growthMB.rounded()))M")
+                                    .monospacedDigit()
+                                    .foregroundStyle(.orange)
+                            }
+                            Text("\(Int(c.rssMB.rounded()))M")
+                                .monospacedDigit()
+                                .foregroundStyle(.secondary)
+                        }
+                        .font(.caption)
+                    }
                 }
             }
+
             if let msg = cleanupMessage {
                 Text(msg)
                     .font(.caption)
@@ -161,14 +196,39 @@ struct PanelView: View {
         }
     }
 
-    private func refreshCleanupSize() {
-        reclaimable = Cleaner.reclaimableBytes()
+    /// 磁盘：第一次点击预演可回收量，第二次才真正删除
+    private func toggleDisk() {
+        if diskArmed {
+            diskArmed = false
+            let freed = Cleaner.run()
+            refreshCleanupSize()
+            cleanupMessage = "磁盘已清理，本次释放 \(Format.freeText(Double(freed)))。"
+            return
+        }
+        refreshCleanupSize()
+        diskArmed = true
+        cleanupMessage = "再次点击确认：清空废纸篓与用户缓存，可回收 \(Format.freeText(Double(reclaimable)))。"
     }
 
-    private func performCleanup() {
-        cleanupArmed = false
-        let freed = Cleaner.run()
-        refreshCleanupSize()
-        cleanupMessage = "已清理，本次释放 \(Format.freeText(Double(freed)))。"
+    /// 内存：第一次点击扫描候选，第二次才结束进程并重新拉起 App
+    private func toggleMemory() {
+        if memArmed {
+            memArmed = false
+            let r = MemoryCleaner.clean(memCandidates.map(\.pid))
+            memCandidates = []
+            cleanupMessage = "已结束 \(r.killed) 个进程，重新拉起 \(r.restarted) 个 App。"
+            return
+        }
+        memCandidates = MemoryCleaner.shared.candidates()
+        if memCandidates.isEmpty {
+            cleanupMessage = "未发现疑似内存泄露的进程（判定：≥400MB 且持续增长 ≥250MB，或占用 ≥1.5G）。"
+            return
+        }
+        memArmed = true
+        cleanupMessage = "再次点击确认：结束以上进程并重新拉起对应 App。"
+    }
+
+    private func refreshCleanupSize() {
+        reclaimable = Cleaner.reclaimableBytes()
     }
 }

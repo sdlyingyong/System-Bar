@@ -32,6 +32,9 @@ jobs:
       - name: Popover dismiss policy tests (all platforms)
         run: ./tests/test_popover.sh
 
+      - name: Memory cleaner tests (all platforms)
+        run: ./tests/test_memcleaner.sh
+
 
       - name: Helper tests (Apple Silicon only)
         if: runner.arch == 'ARM64'

@@ -102,6 +102,7 @@ final class ProcMonitor: ObservableObject {
         let totalMem = Double(ProcessInfo.processInfo.physicalMemory)
         let uids = ProcMonitor.uidMap()
         var seen: [Int32: Double] = [:]
+        var memSnapshot: [Int32: Double] = [:]
         var list: [(pid: Int32, name: String, cpu: Double, rss: Double, mem: Double, system: Bool)] = []
 
         let count = c_listallpids(nil, 0)
@@ -123,6 +124,7 @@ final class ProcMonitor: ObservableObject {
                     cpu = Swift.max(0, (ticks - prev) * tickToSec / wallDelta) * 100
                 }
                 let rssMB = Double(info.pti_resident_size) / 1048576
+                memSnapshot[pid] = rssMB
                 let memPct = totalMem > 0 ? rssMB * 1048576 / totalMem * 100 : 0
                 let isSystem = (uids[pid] ?? UInt32.max) == 0
                 list.append((pid: pid, name: name, cpu: cpu, rss: rssMB, mem: memPct, system: isSystem))
@@ -130,6 +132,8 @@ final class ProcMonitor: ObservableObject {
         }
         prevCpu = seen
         first = false
+        // 顺带喂给内存清理：面板不打开时也在积累泄露判定所需的采样
+        MemoryCleaner.shared.record(memSnapshot)
 
         procs = list
             .sorted { $0.rss > $1.rss }

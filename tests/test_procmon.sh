@@ -5,5 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-swiftc -O "$ROOT/app/ProcMonitor.swift" "$ROOT/tests/test_procmon.swift" -o "$TMP/test_procmon"
+# ProcMonitor 会向 MemoryCleaner 喂内存快照，需一并编译
+swiftc -O "$ROOT/app/MemoryCleaner.swift" "$ROOT/app/ProcMonitor.swift" \
+    "$ROOT/tests/test_procmon.swift" -o "$TMP/test_procmon" -framework AppKit
 "$TMP/test_procmon"
