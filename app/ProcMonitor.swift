@@ -52,17 +52,47 @@ final class ProcMonitor: ObservableObject {
     static func uidMap() -> [Int32: UInt32] {
         var mib = [CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0]
         var len: size_t = 0
-        guard sysctl(&mib, 4, nil, &len, nil, 0) == 0 else { return [:] }
-        var buf = [UInt8](repeating: 0, count: len)
-        guard sysctl(&mib, 4, &buf, &len, nil, 0) == 0 else { return [:] }
-        let count = len / MemoryLayout<kinfo_proc>.size
-        guard count > 0 else { return [:] }
-        var map: [Int32: UInt32] = [:]
-        let procs = buf.withUnsafeBytes { $0.baseAddress!.assumingMemoryBound(to: kinfo_proc.self) }
-        for i in 0..<count {
-            map[procs[i].kp_proc.p_pid] = procs[i].kp_eproc.e_ucred.cr_uid
+        guard sysctl(&mib, 4, nil, &len, nil, 0) == 0, len > 0 else { return [:] }
+
+        // 两次 sysctl 之间进程数会变（凌晨备份/索引时起伏尤其大）：
+        // 分配留 25% + 16KB 余量，万一 ENOMEM 就重新探测长度再来一次。
+        var buf = [UInt8]()
+        for _ in 0..<3 {
+            let capacity = len + len / 4 + 16384
+            var storage = [UInt8](repeating: 0, count: capacity)
+            var outLen = capacity
+            let rc = storage.withUnsafeMutableBytes { raw -> Int32 in
+                sysctl(&mib, 4, raw.baseAddress, &outLen, nil, 0)
+            }
+            if rc == 0 {
+                buf = storage
+                len = outLen
+                break
+            }
+            guard errno == ENOMEM else { return [:] }
+            var probe: size_t = 0
+            if sysctl(&mib, 4, nil, &probe, nil, 0) == 0, probe > 0 { len = probe }
         }
-        return map
+        guard !buf.isEmpty else { return [:] }
+
+        // 上界取「缓冲区实际容量」与「内核回填长度」的较小值，
+        // 步长用 stride 而不是 size —— 否则进程数变动时会越界读。
+        let stride = MemoryLayout<kinfo_proc>.stride
+        let count = min(len, buf.count) / stride
+        guard count > 0 else { return [:] }
+
+        // 指针只能在 withUnsafeBytes 闭包内使用。把它带出闭包是未定义行为，
+        // 曾导致 EXC_BAD_ACCESS（SIGSEGV）在 main thread 随机崩溃。
+        return buf.withUnsafeBytes { raw -> [Int32: UInt32] in
+            guard let base = raw.baseAddress else { return [:] }
+            let procs = base.assumingMemoryBound(to: kinfo_proc.self)
+            var map = [Int32: UInt32]()
+            map.reserveCapacity(count)
+            for i in 0..<count {
+                map[procs[i].kp_proc.p_pid] = procs[i].kp_eproc.e_ucred.cr_uid
+            }
+            return map
+        }
     }
 
     /// 扫描全部进程（不含自身与 helper），用于测试与刷新。

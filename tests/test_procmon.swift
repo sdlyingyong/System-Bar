@@ -44,6 +44,15 @@ struct ProcMonTests {
         check("uidMap 可读 launchd", launchdUid != nil)
         check("launchd uid=0", launchdUid == 0)
 
+        // uidMap 压力回归：曾因「把 withUnsafeBytes 的指针带出闭包」+「用 len/size 做上界越界读」
+        // 导致 main thread 随机 EXC_BAD_ACCESS（5 份崩溃报告都在凌晨）。这里反复调用来暴露回归。
+        var stressOk = true
+        for _ in 0..<300 {
+            if ProcMonitor.uidMap().isEmpty { stressOk = false; break }
+        }
+        check("uidMap 连续 300 次调用稳定且非空", stressOk)
+        check("uidMap 含自身 pid", ProcMonitor.uidMap()[getpid()] == UInt32(getuid()))
+
         // 4. 系统进程两段式：第一次点 ✕ 只提示不杀（只测第一次，绝不真杀 launchd）
         let armed = mon.kill(1)
         check("系统进程第一次 ✕ 不执行", !armed)
