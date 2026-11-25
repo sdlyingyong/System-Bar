@@ -49,6 +49,61 @@ struct CleanerTests {
         // 再次清理 → 0
         check("再次清理释放 0", Cleaner.run(trash: trash, caches: caches) == 0)
 
+        // —— 分类规则（全部在临时目录里，不碰真实 home）——
+        let home = base.appendingPathComponent("home")
+        let catCache = CleanCategory(id: "test-cache", name: "缓存", paths: ["Library/Caches/Test"], risk: .low, note: "")
+        let catManual = CleanCategory(id: "test-manual", name: "模型", paths: ["Models"], risk: .manual, note: "")
+        let catMedium = CleanCategory(id: "test-medium", name: "开发", paths: ["Dev/cache"], risk: .medium, note: "")
+        let target = home.appendingPathComponent("Library/Caches/Test")
+        let manualDir = home.appendingPathComponent("Models")
+        let devDir = home.appendingPathComponent("Dev/cache")
+        try! fm.createDirectory(at: target, withIntermediateDirectories: true)
+        try! fm.createDirectory(at: manualDir, withIntermediateDirectories: true)
+        try! fm.createDirectory(at: devDir, withIntermediateDirectories: true)
+        try! Data(repeating: 7, count: 4096).write(to: target.appendingPathComponent("a.dat"))
+
+        check("low 默认勾选", catCache.defaultSelected)
+        check("medium 默认不勾", !catMedium.defaultSelected)
+        check("manual 不可清理", !catManual.isActionable && !catManual.defaultSelected)
+        check("urls 只返回存在的目录",
+              CleanRules.urls(for: catCache, home: home).map(\.standardizedFileURL.path)
+                == [target.standardizedFileURL.path])
+
+        // Git 保护：祖先含 .git 的目录必须被排除
+        try! fm.createDirectory(at: home.appendingPathComponent("Repo/.git"), withIntermediateDirectories: true)
+        try! fm.createDirectory(at: home.appendingPathComponent("Repo/node_modules"), withIntermediateDirectories: true)
+        check("Git 仓库内目录受保护", CleanRules.isGitProtected(home.appendingPathComponent("Repo/node_modules")))
+        check("普通缓存不受保护", !CleanRules.isGitProtected(target))
+        let gitCat = CleanCategory(id: "git", name: "产物", paths: ["Repo/node_modules"], risk: .medium, note: "")
+        check("resolvedItems 排除 Git 保护目录", !CleanRules.resolvedItems(for: [gitCat], home: home).contains(target))
+        check("resolvedItems 排除 manual 分类",
+              !CleanRules.resolvedItems(for: [catManual], home: home).contains(manualDir))
+
+        // 一键清理：缓存项移入废纸篓，目录保留
+        let beforeCat = Cleaner.folderSize(target)
+        let result = Cleaner.clean(categories: [catCache], home: home, trash: trash)
+        check("一键清理释放 >0 (got \(result.freedBytes))", result.freedBytes > 0)
+        check("一键清理移走 1 项 (got \(result.removedItems))", result.removedItems == 1)
+        check("清理后源目录变空", Cleaner.folderSize(target) == 0)
+        check("源目录仍存在", fm.fileExists(atPath: target.path))
+        check("释放量等于清理前大小", result.freedBytes == beforeCat)
+
+        // 真实 catalog 的自检（只看规则完备性，不执行）
+        check("catalog 含废纸篓", CleanRules.catalog.contains { $0.id == "trash" })
+        check("catalog 含 AI 缓存", CleanRules.catalog.contains { $0.id == "aicache" })
+        check("catalog 含开发缓存", CleanRules.catalog.contains { $0.id == "devcache" })
+        check("catalog 含手动管理", CleanRules.catalog.contains { $0.id == "manual" })
+        check("manual 分类路径不出现在可清理项",
+              CleanRules.resolvedItems(for: CleanRules.catalog.filter { $0.risk == .manual }, home: home).isEmpty)
+
+        // 父子去重：同时选 Library/Caches 与其子目录时只保留父目录
+        let sub = target.appendingPathComponent("sub")
+        try! fm.createDirectory(at: sub, withIntermediateDirectories: true)
+        let parentCat = CleanCategory(id: "parent", name: "父", paths: ["Library/Caches"], risk: .low, note: "")
+        let resolved = CleanRules.resolvedItems(for: [catCache, parentCat], home: home)
+        let rootCaches = home.appendingPathComponent("Library/Caches").standardizedFileURL.path
+        check("父子去重只留父目录", resolved.count == 1 && resolved.first?.standardizedFileURL.path == rootCaches)
+
         try? fm.removeItem(at: base)
         print("\nRESULT: \(pass) passed, \(fail) failed")
         exit(fail == 0 ? 0 : 1)

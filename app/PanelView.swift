@@ -130,27 +130,67 @@ struct PanelView: View {
     @State private var reclaimable: Int64 = 0
     @State private var memCandidates: [MemoryCleaner.Candidate] = []
     @State private var cleanupMessage: String?
+    @State private var showCategories = false
+    @State private var selectedCategories: Set<String> = Set(
+        CleanRules.catalog.filter(\.defaultSelected).map(\.id)
+    )
+    @State private var categorySizes: [String: Int64] = [:]
 
     private var cleanupSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("清理")
                 .font(.headline)
 
-            // —— 磁盘 ——
+            // —— 磁盘：可展开分类，默认只选低风险，一键清理 ——
             HStack(spacing: 6) {
                 Image(systemName: "internaldrive")
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
                 Text("磁盘")
                 Spacer()
-                Text(Format.freeText(Double(reclaimable)))
+                Text(Format.freeText(Double(totalSelectedBytes)))
                     .font(.caption)
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
-                Button(diskArmed ? "确认清理" : "清理") { toggleDisk() }
+                Button(showCategories ? "收起" : "分类") { toggleCategories() }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
+                Button(diskArmed ? "确认清理" : "一键清理") { toggleDisk() }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
                     .tint(diskArmed ? .red : .accentColor)
+            }
+
+            if showCategories {
+                VStack(alignment: .leading, spacing: 3) {
+                    ForEach(CleanRules.catalog) { cat in
+                        HStack(spacing: 6) {
+                            if cat.isActionable {
+                                Image(systemName: selectedCategories.contains(cat.id) ? "checkmark.square.fill" : "square")
+                                    .foregroundStyle(selectedCategories.contains(cat.id) ? Color.accentColor : Color.secondary)
+                                    .onTapGesture { toggleCategory(cat.id) }
+                            } else {
+                                Image(systemName: "square.dashed")
+                                    .foregroundStyle(.tertiary)
+                            }
+                            Text(cat.name)
+                            if cat.risk == .medium {
+                                Text("重建慢").font(.caption2).foregroundStyle(.orange)
+                            } else if cat.risk == .manual {
+                                Text("只看").font(.caption2).foregroundStyle(.tertiary)
+                            }
+                            Spacer()
+                            Text(Format.freeText(Double(categorySizes[cat.id] ?? 0)))
+                                .font(.caption)
+                                .monospacedDigit()
+                                .foregroundStyle(.secondary)
+                        }
+                        .font(.caption)
+                        .contentShape(Rectangle())
+                        .onTapGesture { if cat.isActionable { toggleCategory(cat.id) } }
+                        .help(cat.note)
+                    }
+                }
             }
 
             // —— 内存 ——
@@ -196,18 +236,46 @@ struct PanelView: View {
         }
     }
 
-    /// 磁盘：第一次点击预演可回收量，第二次才真正删除
+    /// 选中分类的合计大小（用于按钮旁显示）
+    private var totalSelectedBytes: Int64 {
+        CleanRules.catalog
+            .filter { selectedCategories.contains($0.id) }
+            .reduce(0) { $0 + (categorySizes[$1.id] ?? 0) }
+    }
+
+    private func toggleCategories() {
+        showCategories.toggle()
+        if showCategories { refreshCategorySizes() }
+    }
+
+    private func toggleCategory(_ id: String) {
+        if selectedCategories.contains(id) { selectedCategories.remove(id) }
+        else { selectedCategories.insert(id) }
+    }
+
+    /// 磁盘：第一次点击预演，第二次才真正清理（非废纸篓项移入废纸篓）
     private func toggleDisk() {
         if diskArmed {
             diskArmed = false
-            let freed = Cleaner.run()
+            let chosen = CleanRules.catalog.filter { selectedCategories.contains($0.id) }
+            let result = Cleaner.clean(categories: chosen)
             refreshCleanupSize()
-            cleanupMessage = "磁盘已清理，本次释放 \(Format.freeText(Double(freed)))。"
+            refreshCategorySizes()
+            cleanupMessage = "已清理 \(result.removedItems) 项，释放 \(Format.freeText(Double(result.freedBytes)))（移入废纸篓）。"
             return
         }
         refreshCleanupSize()
+        refreshCategorySizes()
         diskArmed = true
-        cleanupMessage = "再次点击确认：清空废纸篓与用户缓存，可回收 \(Format.freeText(Double(reclaimable)))。"
+        cleanupMessage = "再次点击确认：清理所选分类，约 \(Format.freeText(Double(totalSelectedBytes)))；缓存移入废纸篓，废纸篓永久清空。"
+    }
+
+    private func refreshCategorySizes() {
+        var sizes: [String: Int64] = [:]
+        for cat in CleanRules.catalog {
+            sizes[cat.id] = CleanRules.urls(for: cat).reduce(0) { $0 + Cleaner.folderSize($1) }
+        }
+        categorySizes = sizes
     }
 
     /// 内存：第一次点击扫描候选，第二次才结束进程并重新拉起 App

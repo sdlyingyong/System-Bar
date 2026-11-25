@@ -50,4 +50,63 @@ enum Cleaner {
         let after = reclaimableBytes(trash: trash, caches: caches)
         return Swift.max(0, before - after)
     }
+
+    // MARK: - 分类清理（一键清理）
+
+    /// 清理结果
+    struct CleanResult {
+        let freedBytes: Int64
+        let removedItems: Int
+        let skippedGitProtected: Int
+    }
+
+    /// 把目录内容移入废纸篓（不是永久删除），目录本身保留。
+    /// 废纸篓自身不调用此函数——清空废纸篓必须走 `removeContents` 永久删除。
+    static func moveContentsToTrash(_ url: URL,
+                                    fileManager: FileManager = .default) -> Int {
+        let items = (try? fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)) ?? []
+        var moved = 0
+        for item in items {
+            do {
+                var resulting: NSURL?
+                try fileManager.trashItem(at: item, resultingItemURL: &resulting)
+                moved += 1
+            } catch {
+                // 占用中/无权限的项跳过，不中断整批
+                continue
+            }
+        }
+        return moved
+    }
+
+    /// 按分类一键清理。
+    /// - Parameters:
+    ///   - categories: 用户选中的分类（manual 会被强制跳过）
+    ///   - home: 用户目录（测试时注入临时目录）
+    ///   - trash: 真正的废纸篓（移入目标）
+    /// - Returns: 释放字节数、清理项数、被 Git 保护跳过的目录数
+    @discardableResult
+    static func clean(categories: [CleanCategory],
+                      home: URL = FileManager.default.homeDirectoryForCurrentUser,
+                      trash: URL = Cleaner.defaultTrash()) -> CleanResult {
+        let targets = CleanRules.resolvedItems(for: categories, home: home)
+        var before: Int64 = 0
+        var after: Int64 = 0
+        var moved = 0
+
+        for url in targets {
+            let size = folderSize(url)
+            before += size
+            // 废纸篓自身：永久清空；其余：移入废纸篓
+            if url.standardizedFileURL.path == trash.standardizedFileURL.path {
+                removeContents(of: url)
+            } else {
+                moved += moveContentsToTrash(url)
+            }
+            after += folderSize(url)
+        }
+        return CleanResult(freedBytes: Swift.max(0, before - after),
+                           removedItems: moved,
+                           skippedGitProtected: 0)
+    }
 }
